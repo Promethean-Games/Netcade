@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>N64 Wasm - Official Test</title>
+    <meta charset="utf-8">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/rivets/0.9.6/rivets.bundled.min.js"></script>
+    <script>
+        var ROMLIST = [];
+        var N64WASMSETTINGS = {
+            CLOUDSAVEURL: "",
+            SHOWADVANCED: false,
+            SHOWOPTIONS: false
+        };
+        
+        // Dark mode always disabled to prevent errors
+        function getSystemDarkMode() {
+            return false;
+        }
+    </script>
+    <style>
+        body { 
+            background: #1a1a2e; 
+            color: #fff; 
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #canvasDiv { 
+            display: none; 
+            margin: 20px 0;
+        }
+        canvas { 
+            background: #000; 
+        }
+        .status {
+            padding: 10px;
+            background: #222;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        button {
+            background: #e43f5a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 4px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <!-- Required elements from original N64Wasm -->
+    <div id="topPanel" style="display:none;"></div>
+    <div id="bottomPanel" style="display:none;"></div>
+    <div id="loginModal" style="display:none;"></div>
+    <div id="buttonsModal" style="display:none;"></div>
+    <div id="lblError" style="display:none;"></div>
+    <div id="lblErrorOuter" style="display:none;"></div>
+    <div id="mobileBottomPanel" style="display:none;"></div>
+    <div id="mobileButtons" style="display:none;"></div>
+    <div id="dropArea" style="display:none;"></div>
+    <input id="file-upload" type="file" style="display:none;" />
+    <input id="file-upload-eep" type="file" style="display:none;" />
+    <input id="file-upload-sra" type="file" style="display:none;" />
+    <input id="file-upload-fla" type="file" style="display:none;" />
+    
+    <h1>N64 Wasm - Official Files Test</h1>
+    
+    <div class="status" id="status">Loading scripts...</div>
+    
+    <div>
+        <input type="file" id="romFile" accept=".z64,.n64,.v64,.rom" />
+        <button id="loadBtn" disabled>Load ROM</button>
+    </div>
+    
+    <div id="canvasDiv">
+        <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
+    
+    <script src="settings.js"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        document.getElementById('status').textContent = 'Scripts loaded, waiting for module initialization...';
+        
+        var checkInterval = setInterval(function() {
+            if (window.myClass && !window.myClass.rivetsData.moduleInitializing) {
+                clearInterval(checkInterval);
+                document.getElementById('status').textContent = 'Module ready! Select a ROM file.';
+                document.getElementById('loadBtn').disabled = false;
+            }
+        }, 100);
+        
+        document.getElementById('romFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                document.getElementById('status').textContent = 'Reading ROM file...';
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var byteArray = new Uint8Array(e.target.result);
+                    document.getElementById('status').textContent = 'ROM loaded: ' + file.name + ' (' + byteArray.length + ' bytes)';
+                    window.testRomData = byteArray;
+                    window.testRomName = file.name;
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+        
+        document.getElementById('loadBtn').addEventListener('click', function() {
+            if (window.testRomData && window.myClass) {
+                document.getElementById('status').textContent = 'Starting emulator...';
+                document.getElementById('canvasDiv').style.display = 'block';
+                window.myClass.rom_name = window.testRomName;
+                try {
+                    window.myClass.LoadEmulator(window.testRomData);
+                } catch (err) {
+                    document.getElementById('status').textContent = 'Error: ' + err.message;
+                    console.error("LoadEmulator exception:", err);
+                }
+            } else {
+                alert('Please select a ROM file first');
+            }
+        });
+    </script>
+</body>
+</html>
