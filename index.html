@@ -583,6 +583,65 @@
                 justify-content: center;
             }
 
+            .play-options {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+
+            .play-option {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                padding: 16px 20px;
+                background: var(--ui-dark);
+                border: 1px solid var(--card-border);
+                border-radius: 10px;
+                text-decoration: none;
+                transition: all 0.2s;
+            }
+
+            .play-option:hover {
+                border-color: var(--primary);
+                background: rgba(228, 63, 90, 0.1);
+                transform: translateX(4px);
+            }
+
+            .play-option svg {
+                width: 32px;
+                height: 32px;
+                color: var(--primary);
+                flex-shrink: 0;
+            }
+
+            .play-option-text {
+                text-align: left;
+            }
+
+            .play-option-text strong {
+                display: block;
+                font-family: "Rajdhani", sans-serif;
+                font-size: 1.05rem;
+                color: var(--text-primary);
+                margin-bottom: 2px;
+            }
+
+            .play-option-text span {
+                font-size: 0.85rem;
+                color: var(--text-muted);
+            }
+
+            .modal-hint {
+                font-size: 0.8rem;
+                color: var(--text-muted);
+                margin-bottom: 20px;
+                padding: 12px;
+                background: var(--ui-dark);
+                border-radius: 8px;
+                border-left: 3px solid var(--warning);
+            }
+
             /* Toast */
             .toast {
                 position: fixed;
@@ -883,6 +942,48 @@
             </div>
         </div>
 
+        <!-- Play Modal -->
+        <div class="modal-overlay" id="play-modal">
+            <div class="modal">
+                <svg class="modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <h2 class="modal-title">Play <span id="play-game-name">Game</span></h2>
+                <p class="modal-desc">
+                    To play N64 games, you need to use an external emulator. Choose an option below:
+                </p>
+                
+                <div class="play-options">
+                    <a href="https://nicholasblush.github.io/n64js.github.io/" target="_blank" class="play-option" id="play-n64js">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        <div class="play-option-text">
+                            <strong>n64js Emulator</strong>
+                            <span>Open emulator and load your ROM file there</span>
+                        </div>
+                    </a>
+                    <a href="https://nicholasblush.github.io/n64wasm.github.io/" target="_blank" class="play-option">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="6" width="20" height="12" rx="2"/>
+                            <circle cx="7" cy="12" r="1.5"/>
+                            <circle cx="17" cy="12" r="1.5"/>
+                        </svg>
+                        <div class="play-option-text">
+                            <strong>N64Wasm Emulator</strong>
+                            <span>Alternative WASM-based emulator</span>
+                        </div>
+                    </a>
+                </div>
+                
+                <p class="modal-hint">Your ROM file is saved in your browser. You'll need to select it again in the external emulator.</p>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="close-play-modal">Close</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast -->
         <div class="toast" id="toast">
             <svg
@@ -1165,14 +1266,12 @@
 
                 function playGame(index) {
                     var game = games[index];
-                    showToast(
-                        "Launching " +
-                            game.name +
-                            "... (Emulator requires WASM files)",
-                        "success",
-                    );
-                    // In a full implementation, this would load the ROM into the emulator
+                    currentGameToPlay = game;
+                    document.getElementById('play-game-name').textContent = game.name;
+                    document.getElementById('play-modal').classList.add('active');
                 }
+                
+                var currentGameToPlay = null;
 
                 function deleteGame(index) {
                     if (
@@ -1248,6 +1347,17 @@
                 });
                 modal.addEventListener("click", function (e) {
                     if (e.target === modal) modal.classList.remove("active");
+                });
+
+                // Play modal
+                var playModal = document.getElementById("play-modal");
+                var closePlayModal = document.getElementById("close-play-modal");
+                
+                closePlayModal.addEventListener("click", function () {
+                    playModal.classList.remove("active");
+                });
+                playModal.addEventListener("click", function (e) {
+                    if (e.target === playModal) playModal.classList.remove("active");
                 });
 
                 dropZone.addEventListener("click", function () {
