@@ -4,471 +4,464 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>N64 Vault - Nintendo 64 Emulator</title>
-    
-    <!-- Required external libraries -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/rivets/0.9.6/rivets.bundled.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.2/dist/FileSaver.min.js"></script>
-    
-    <!-- Configuration -->
-    <script>
-        // ROM list (empty for file upload mode)
-        var ROMLIST = [];
-        
-        // N64Wasm settings
-        var N64WASMSETTINGS = {
-            CLOUDSAVEURL: "",
-            SHOWADVANCED: true,
-            SHOWOPTIONS: true
-        };
-        
-        // Required helper functions - dark mode always disabled
-        function getSystemDarkMode() {
-            return false;
-        }
-        
-        // Load saved control mappings from localStorage
-        function loadSavedMappings() {
-            try {
-                var saved = localStorage.getItem('n64vault_control_map');
-                if (saved) {
-                    console.log("Loaded saved control mappings from localStorage");
-                    return JSON.parse(saved);
-                }
-            } catch(e) {
-                console.warn("Failed to load saved mappings:", e);
-            }
-            return null;
-        }
-    </script>
+    <meta name="description" content="Play classic Nintendo 64 games in your browser with N64 Vault - a modern web-based emulator.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Rajdhani:wght@400;500;600;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary: #E43F5A;
+            --primary-hover: #c9354d;
+            --secondary: #E94560;
+            --background: #0F0F23;
+            --card-bg: #1B1B2F;
+            --card-border: #2a2a45;
+            --ui-dark: #16213E;
+            --accent: #162447;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6b6b80;
+            --success: #4ade80;
+            --warning: #fbbf24;
         }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            background: linear-gradient(135deg, #0F0F23 0%, #1B1B2F 50%, #162447 100%);
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
+            background-image: 
+                linear-gradient(rgba(228, 63, 90, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(228, 63, 90, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
         }
         
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        
+        .header { text-align: center; margin-bottom: 40px; }
+        
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 30px rgba(228, 63, 90, 0.5);
+            margin-bottom: 8px;
         }
         
-        .header h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(90deg, #E43F5A, #E94560);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            color: #888;
-            font-size: 1rem;
-        }
-        
-        .container {
-            max-width: 800px;
-            width: 100%;
-        }
-        
-        .upload-zone {
-            border: 2px dashed #E43F5A;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            background: rgba(228, 63, 90, 0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
-        }
-        
-        .upload-zone:hover {
-            background: rgba(228, 63, 90, 0.2);
-            border-color: #E94560;
-        }
-        
-        .upload-zone.dragover {
-            background: rgba(228, 63, 90, 0.3);
-            transform: scale(1.02);
-        }
-        
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        
-        .upload-text {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-        }
-        
-        .upload-hint {
-            color: #888;
-            font-size: 0.9rem;
-        }
-        
-        #file-upload-main {
-            display: none;
+        .tagline {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 2px;
         }
         
         .status-bar {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+            padding: 12px 20px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-bottom: 24px;
+            border: 1px solid var(--card-border);
         }
         
-        .status-indicator {
-            width: 12px;
-            height: 12px;
+        .status-dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #E43F5A;
-            animation: pulse 2s infinite;
         }
         
-        .status-indicator.ready {
-            background: #4CAF50;
-            animation: none;
+        .status-dot.checking { background: var(--warning); animation: pulse 2s infinite; }
+        .status-dot.ready { background: var(--success); }
+        .status-dot.error { background: var(--primary); }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .status-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
         }
         
-        .status-indicator.loading {
-            background: #FFC107;
-        }
-        
-        .status-indicator.error {
-            background: #f44336;
-            animation: none;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        #canvasDiv {
-            display: none;
-            margin: 20px 0;
+        .main-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 24px;
+            border: 1px solid var(--card-border);
             text-align: center;
         }
         
-        #canvas {
-            background: #000;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(228, 63, 90, 0.3);
-            max-width: 100%;
+        .icon-large {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            color: var(--primary);
         }
         
-        .controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-            flex-wrap: wrap;
+        .main-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
         }
         
-        .btn {
-            background: linear-gradient(135deg, #E43F5A, #E94560);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
+        .main-desc {
             font-size: 1rem;
-            transition: all 0.3s ease;
+            color: var(--text-secondary);
+            max-width: 550px;
+            margin: 0 auto 32px;
+            line-height: 1.7;
+        }
+        
+        .hosting-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        
+        .hosting-badge {
             display: flex;
             align-items: center;
             gap: 8px;
+            padding: 10px 16px;
+            background: var(--ui-dark);
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
         }
         
-        .btn:hover {
+        .hosting-badge svg {
+            width: 18px;
+            height: 18px;
+            color: var(--success);
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 16px;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(228, 63, 90, 0.4);
+            box-shadow: 0 4px 20px rgba(228, 63, 90, 0.4);
         }
         
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 2px solid var(--card-border);
         }
         
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
         
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
+        .btn svg { width: 20px; height: 20px; }
         
-        .keyboard-guide {
-            background: rgba(0, 0, 0, 0.3);
+        .controls-section {
+            background: var(--card-bg);
             border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
+            padding: 24px;
+            border: 1px solid var(--card-border);
         }
         
-        .keyboard-guide h3 {
-            color: #E43F5A;
-            margin-bottom: 15px;
+        .section-title {
+            font-family: 'Rajdhani', sans-serif;
             font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        .key-grid {
+        .controls-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 10px;
         }
         
-        .key-item {
+        .control-item {
             display: flex;
             justify-content: space-between;
-            padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.05);
+            align-items: center;
+            padding: 10px 14px;
+            background: var(--ui-dark);
             border-radius: 6px;
+            border: 1px solid var(--card-border);
+            transition: all 0.2s ease;
         }
         
-        .key-label {
-            color: #888;
+        .control-item:hover {
+            border-color: var(--primary);
+            background: rgba(228, 63, 90, 0.1);
         }
         
-        .key-value {
-            color: #E43F5A;
-            font-family: monospace;
+        .control-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
         }
         
-        /* Hidden required elements for N64Wasm */
-        .hidden-elements {
-            display: none !important;
+        .control-key {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 4px 8px;
+            background: var(--accent);
+            border-radius: 4px;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            min-width: 28px;
+            text-align: center;
         }
         
         .footer {
-            margin-top: auto;
-            padding-top: 30px;
             text-align: center;
-            color: #666;
-            font-size: 0.85rem;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--card-border);
         }
         
-        .footer a {
-            color: #E43F5A;
+        .footer-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        
+        .footer-link {
+            color: var(--primary);
             text-decoration: none;
+        }
+        
+        .footer-link:hover { text-decoration: underline; }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid var(--card-border);
+        }
+        
+        .feature {
+            text-align: left;
+            padding: 16px;
+            background: var(--ui-dark);
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+        }
+        
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .feature-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .feature-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        
+        @media (max-width: 600px) {
+            .logo { font-size: 2rem; }
+            .main-card { padding: 24px 16px; }
+            .btn { width: 100%; justify-content: center; }
         }
     </style>
 </head>
 <body>
-    <!-- Hidden required elements for N64Wasm compatibility -->
-    <div class="hidden-elements">
-        <div id="topPanel"></div>
-        <div id="bottomPanel"></div>
-        <div id="loginModal"></div>
-        <div id="buttonsModal"></div>
-        <div id="lblError"></div>
-        <div id="lblErrorOuter"></div>
-        <div id="mobileBottomPanel"></div>
-        <div id="mobileButtons"></div>
-        <div id="dropArea"></div>
-        <input id="file-upload" type="file" />
-        <input id="file-upload-eep" type="file" />
-        <input id="file-upload-sra" type="file" />
-        <input id="file-upload-fla" type="file" />
-    </div>
-    
-    <div class="header">
-        <h1>N64 Vault</h1>
-        <p>Web-Based Nintendo 64 Emulator</p>
-    </div>
-    
     <div class="container">
+        <header class="header">
+            <h1 class="logo">N64 Vault</h1>
+            <p class="tagline">Web-Based Nintendo 64 Emulator</p>
+        </header>
+        
         <div class="status-bar">
-            <div class="status-indicator" id="statusIndicator"></div>
-            <span id="statusText">Initializing emulator...</span>
+            <div class="status-dot" id="status-dot"></div>
+            <span class="status-text" id="status-text">Checking environment...</span>
         </div>
         
-        <div class="upload-zone" id="uploadZone">
-            <div class="upload-icon">🎮</div>
-            <div class="upload-text">Drop your ROM file here</div>
-            <div class="upload-hint">Supports .z64, .n64, .v64, .rom files</div>
-            <input type="file" id="file-upload-main" accept=".z64,.n64,.v64,.rom" />
-        </div>
-        
-        <div id="canvasDiv">
-            <canvas id="canvas" width="640" height="480"></canvas>
-            <div class="controls">
-                <button class="btn btn-secondary" id="btnFullscreen">⛶ Fullscreen</button>
-                <button class="btn btn-secondary" id="btnReset">↺ Reset</button>
-                <button class="btn btn-secondary" id="btnMute">🔊 Sound</button>
+        <div class="main-card">
+            <svg class="icon-large" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                <circle cx="7" cy="12" r="1.5"/>
+                <circle cx="17" cy="12" r="1.5"/>
+                <circle cx="12" cy="9" r="1"/>
+                <circle cx="12" cy="15" r="1"/>
+                <path d="M12 6v-2"/>
+                <path d="M7 6v-1"/>
+                <path d="M17 6v-1"/>
+            </svg>
+            
+            <h2 class="main-title" id="main-title">Welcome to N64 Vault</h2>
+            <p class="main-desc" id="main-desc">
+                Experience the golden age of gaming with our web-based Nintendo 64 emulator. 
+                Upload your legally obtained ROM files and play classic games directly in your browser.
+            </p>
+            
+            <div class="hosting-options" id="hosting-options" style="display: none;">
+                <div class="hosting-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    Netlify
+                </div>
+                <div class="hosting-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    Vercel
+                </div>
+                <div class="hosting-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    GitHub Pages
+                </div>
+            </div>
+            
+            <div class="action-buttons" id="action-buttons">
+                <a href="https://nicholasblush.github.io/n64js.github.io/" target="_blank" class="btn btn-primary" id="primary-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Launch Emulator
+                </a>
+                <a href="https://github.com" target="_blank" class="btn btn-outline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+                    </svg>
+                    View on GitHub
+                </a>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <h4 class="feature-title">ROM Upload</h4>
+                    <p class="feature-desc">Drag and drop your ROM files to start playing instantly</p>
+                </div>
+                <div class="feature">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="6" width="20" height="12" rx="2"/>
+                        <circle cx="8" cy="12" r="2"/>
+                    </svg>
+                    <h4 class="feature-title">Controller Support</h4>
+                    <p class="feature-desc">Full keyboard and USB gamepad compatibility</p>
+                </div>
+                <div class="feature">
+                    <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    <h4 class="feature-title">Save States</h4>
+                    <p class="feature-desc">Save your progress and continue anytime</p>
+                </div>
             </div>
         </div>
         
-        <div class="keyboard-guide">
-            <h3>Keyboard Controls</h3>
-            <div class="key-grid">
-                <div class="key-item"><span class="key-label">A Button</span><span class="key-value">X</span></div>
-                <div class="key-item"><span class="key-label">B Button</span><span class="key-value">Z</span></div>
-                <div class="key-item"><span class="key-label">Start</span><span class="key-value">Enter</span></div>
-                <div class="key-item"><span class="key-label">Z Trigger</span><span class="key-value">A</span></div>
-                <div class="key-item"><span class="key-label">L Shoulder</span><span class="key-value">Q</span></div>
-                <div class="key-item"><span class="key-label">R Shoulder</span><span class="key-value">E</span></div>
-                <div class="key-item"><span class="key-label">D-Pad</span><span class="key-value">Arrow Keys</span></div>
-                <div class="key-item"><span class="key-label">Analog Stick</span><span class="key-value">W A S D</span></div>
-                <div class="key-item"><span class="key-label">C-Up</span><span class="key-value">I</span></div>
-                <div class="key-item"><span class="key-label">C-Down</span><span class="key-value">K</span></div>
-                <div class="key-item"><span class="key-label">C-Left</span><span class="key-value">J</span></div>
-                <div class="key-item"><span class="key-label">C-Right</span><span class="key-value">L</span></div>
-            </div>
+        <div class="controls-section">
+            <h3 class="section-title">Default Keyboard Controls</h3>
+            <div class="controls-grid" id="controls-grid"></div>
         </div>
+        
+        <footer class="footer">
+            <p class="footer-text">N64 Vault - Powered by <a href="https://nicholasblush.github.io/n64wasm.github.io/" target="_blank" class="footer-link">N64Wasm</a></p>
+            <p class="footer-text">For personal use only. Please use legally obtained ROM files.</p>
+        </footer>
     </div>
-    
-    <div class="footer">
-        <p>N64 Vault - Powered by <a href="https://github.com/nbarkhina/N64Wasm" target="_blank">N64Wasm</a></p>
-        <p>For personal use only. Please use legally obtained ROM files.</p>
-    </div>
-    
-    <!-- N64Wasm Scripts - These must be in the same directory -->
-    <script src="settings.js"></script>
-    <script src="script.js"></script>
     
     <script>
-        // Status management
-        function setStatus(text, state) {
-            document.getElementById('statusText').textContent = text;
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = 'status-indicator';
-            if (state) indicator.classList.add(state);
-        }
-        
-        // Wait for module initialization
-        var initCheckInterval = setInterval(function() {
-            if (window.myClass && !window.myClass.rivetsData.moduleInitializing) {
-                clearInterval(initCheckInterval);
-                setStatus('Ready! Drop a ROM file to play.', 'ready');
-            }
-        }, 100);
-        
-        // Timeout for initialization
-        setTimeout(function() {
-            if (!window.myClass || window.myClass.rivetsData.moduleInitializing) {
-                setStatus('Initialization taking longer than expected...', 'loading');
-            }
-        }, 5000);
-        
-        // File upload handling
-        var uploadZone = document.getElementById('uploadZone');
-        var fileInput = document.getElementById('file-upload-main');
-        
-        uploadZone.addEventListener('click', function() {
-            fileInput.click();
-        });
-        
-        uploadZone.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            uploadZone.classList.add('dragover');
-        });
-        
-        uploadZone.addEventListener('dragleave', function() {
-            uploadZone.classList.remove('dragover');
-        });
-        
-        uploadZone.addEventListener('drop', function(e) {
-            e.preventDefault();
-            uploadZone.classList.remove('dragover');
-            var files = e.dataTransfer.files;
-            if (files.length > 0) {
-                loadRomFile(files[0]);
-            }
-        });
-        
-        fileInput.addEventListener('change', function(e) {
-            if (e.target.files.length > 0) {
-                loadRomFile(e.target.files[0]);
-            }
-        });
-        
-        function loadRomFile(file) {
-            var validExtensions = ['.z64', '.n64', '.v64', '.rom'];
-            var ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        (function() {
+            var controls = [
+                { id: 'a', label: 'A Button', key: 'X' },
+                { id: 'b', label: 'B Button', key: 'Z' },
+                { id: 'start', label: 'Start', key: 'Enter' },
+                { id: 'z', label: 'Z Trigger', key: 'A' },
+                { id: 'l', label: 'L Shoulder', key: 'Q' },
+                { id: 'r', label: 'R Shoulder', key: 'E' },
+                { id: 'dpadUp', label: 'D-Pad', key: 'Arrows' },
+                { id: 'analog', label: 'Analog Stick', key: 'WASD' },
+                { id: 'cUp', label: 'C-Up', key: 'I' },
+                { id: 'cDown', label: 'C-Down', key: 'K' },
+                { id: 'cLeft', label: 'C-Left', key: 'J' },
+                { id: 'cRight', label: 'C-Right', key: 'L' }
+            ];
             
-            if (!validExtensions.includes(ext)) {
-                setStatus('Invalid file format. Please use .z64, .n64, .v64, or .rom files.', 'error');
-                return;
-            }
+            var grid = document.getElementById('controls-grid');
+            grid.innerHTML = controls.map(function(c) {
+                return '<div class="control-item"><span class="control-label">' + c.label + '</span><span class="control-key">' + c.key + '</span></div>';
+            }).join('');
             
-            setStatus('Loading ROM: ' + file.name + '...', 'loading');
+            var statusDot = document.getElementById('status-dot');
+            var statusText = document.getElementById('status-text');
+            var mainTitle = document.getElementById('main-title');
+            var mainDesc = document.getElementById('main-desc');
+            var hostingOptions = document.getElementById('hosting-options');
             
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var byteArray = new Uint8Array(e.target.result);
-                startEmulator(file.name, byteArray);
-            };
-            reader.onerror = function() {
-                setStatus('Failed to read ROM file.', 'error');
-            };
-            reader.readAsArrayBuffer(file);
-        }
-        
-        function startEmulator(filename, byteArray) {
-            if (!window.myClass) {
-                setStatus('Emulator not initialized. Please refresh the page.', 'error');
-                return;
-            }
+            var hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
+            var hasCrossOriginIsolated = window.crossOriginIsolated === true;
             
-            try {
-                setStatus('Starting ' + filename + '...', 'loading');
-                window.myClass.rom_name = filename;
-                document.getElementById('uploadZone').style.display = 'none';
-                document.getElementById('canvasDiv').style.display = 'block';
-                window.myClass.LoadEmulator(byteArray);
-                setStatus('Playing: ' + filename, 'ready');
-            } catch (err) {
-                setStatus('Error: ' + err.message, 'error');
-                console.error('Emulator error:', err);
-            }
-        }
-        
-        // Control buttons
-        document.getElementById('btnFullscreen').addEventListener('click', function() {
-            var canvas = document.getElementById('canvas');
-            if (canvas.requestFullscreen) {
-                canvas.requestFullscreen();
-            } else if (canvas.webkitRequestFullscreen) {
-                canvas.webkitRequestFullscreen();
-            } else if (canvas.mozRequestFullScreen) {
-                canvas.mozRequestFullScreen();
-            }
-        });
-        
-        document.getElementById('btnReset').addEventListener('click', function() {
-            if (window.myClass && window.myClass.resetGame) {
-                window.myClass.resetGame();
+            if (hasSharedArrayBuffer && hasCrossOriginIsolated) {
+                statusDot.className = 'status-dot ready';
+                statusText.textContent = 'Environment ready for emulation';
             } else {
-                location.reload();
+                statusDot.className = 'status-dot error';
+                statusText.textContent = 'Limited environment - use external emulator';
+                mainTitle.textContent = 'Play N64 Games Online';
+                mainDesc.textContent = 'This environment has limited browser features for emulation. Click the button below to launch a fully compatible N64 emulator, or host these files on a platform with proper headers.';
+                hostingOptions.style.display = 'flex';
             }
-        });
-        
-        var isMuted = false;
-        document.getElementById('btnMute').addEventListener('click', function() {
-            isMuted = !isMuted;
-            if (window.myClass && window.myClass.gainNode) {
-                window.myClass.gainNode.gain.value = isMuted ? 0 : 0.5;
-            }
-            this.textContent = isMuted ? '🔇 Muted' : '🔊 Sound';
-        });
+        })();
     </script>
 </body>
 </html>
