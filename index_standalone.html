@@ -1,460 +1,237 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N64 Vault - Nintendo 64 Emulator</title>
-    
-    <!-- Required external libraries -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/rivets/0.9.6/rivets.bundled.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.2/dist/FileSaver.min.js"></script>
-    
-    <!-- Configuration -->
-    <script>
-        // ROM list (empty for file upload mode)
-        var ROMLIST = [];
-        
-        // N64Wasm settings
-        var N64WASMSETTINGS = {
-            CLOUDSAVEURL: "",
-            SHOWADVANCED: true,
-            SHOWOPTIONS: true
-        };
-        
-        // Required helper functions
-        function getSystemDarkMode() {
-            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-    </script>
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #0F0F23 0%, #1B1B2F 50%, #162447 100%);
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(90deg, #E43F5A, #E94560);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            color: #888;
-            font-size: 1rem;
-        }
-        
-        .container {
-            max-width: 800px;
-            width: 100%;
-        }
-        
-        .upload-zone {
-            border: 2px dashed #E43F5A;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            background: rgba(228, 63, 90, 0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 20px;
-        }
-        
-        .upload-zone:hover {
-            background: rgba(228, 63, 90, 0.2);
-            border-color: #E94560;
-        }
-        
-        .upload-zone.dragover {
-            background: rgba(228, 63, 90, 0.3);
-            transform: scale(1.02);
-        }
-        
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        
-        .upload-text {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-        }
-        
-        .upload-hint {
-            color: #888;
-            font-size: 0.9rem;
-        }
-        
-        #file-upload-main {
-            display: none;
-        }
-        
-        .status-bar {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #E43F5A;
-            animation: pulse 2s infinite;
-        }
-        
-        .status-indicator.ready {
-            background: #4CAF50;
-            animation: none;
-        }
-        
-        .status-indicator.loading {
-            background: #FFC107;
-        }
-        
-        .status-indicator.error {
-            background: #f44336;
-            animation: none;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        #canvasDiv {
-            display: none;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        #canvas {
-            background: #000;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(228, 63, 90, 0.3);
-            max-width: 100%;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #E43F5A, #E94560);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(228, 63, 90, 0.4);
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .keyboard-guide {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        
-        .keyboard-guide h3 {
-            color: #E43F5A;
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-        }
-        
-        .key-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        
-        .key-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-        }
-        
-        .key-label {
-            color: #888;
-        }
-        
-        .key-value {
-            color: #E43F5A;
-            font-family: monospace;
-        }
-        
-        /* Hidden required elements for N64Wasm */
-        .hidden-elements {
-            display: none !important;
-        }
-        
-        .footer {
-            margin-top: auto;
-            padding-top: 30px;
-            text-align: center;
-            color: #666;
-            font-size: 0.85rem;
-        }
-        
-        .footer a {
-            color: #E43F5A;
-            text-decoration: none;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>N64 Vault - Emulator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+    #status-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #0F0F23;
+      color: #E43F5A;
+      font-size: 16px;
+      text-align: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+    #status-overlay.hidden {
+      display: none;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #1B1B2F;
+      border-top-color: #E43F5A;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #status-text {
+      max-width: 300px;
+      line-height: 1.5;
+    }
+    #controls-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      z-index: 1001;
+    }
+    .ctrl-btn {
+      background-color: #E43F5A;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .ctrl-btn:hover {
+      background-color: #E94560;
+    }
+    .ctrl-btn:disabled {
+      background-color: #444;
+      cursor: not-allowed;
+    }
+    #rom-file-input {
+      display: none;
+    }
+    body.embedded #controls-bar {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-    <!-- Hidden required elements for N64Wasm compatibility -->
-    <div class="hidden-elements">
-        <div id="topPanel"></div>
-        <div id="bottomPanel"></div>
-        <div id="loginModal"></div>
-        <div id="buttonsModal"></div>
-        <div id="lblError"></div>
-        <div id="lblErrorOuter"></div>
-        <div id="mobileBottomPanel"></div>
-        <div id="mobileButtons"></div>
-        <div id="dropArea"></div>
-        <input id="file-upload" type="file" />
-        <input id="file-upload-eep" type="file" />
-        <input id="file-upload-sra" type="file" />
-        <input id="file-upload-fla" type="file" />
-    </div>
-    
-    <div class="header">
-        <h1>N64 Vault</h1>
-        <p>Web-Based Nintendo 64 Emulator</p>
-    </div>
-    
-    <div class="container">
-        <div class="status-bar">
-            <div class="status-indicator" id="statusIndicator"></div>
-            <span id="statusText">Initializing emulator...</span>
-        </div>
-        
-        <div class="upload-zone" id="uploadZone">
-            <div class="upload-icon">🎮</div>
-            <div class="upload-text">Drop your ROM file here</div>
-            <div class="upload-hint">Supports .z64, .n64, .v64, .rom files</div>
-            <input type="file" id="file-upload-main" accept=".z64,.n64,.v64,.rom" />
-        </div>
-        
-        <div id="canvasDiv">
-            <canvas id="canvas" width="640" height="480"></canvas>
-            <div class="controls">
-                <button class="btn btn-secondary" id="btnFullscreen">⛶ Fullscreen</button>
-                <button class="btn btn-secondary" id="btnReset">↺ Reset</button>
-                <button class="btn btn-secondary" id="btnMute">🔊 Sound</button>
-            </div>
-        </div>
-        
-        <div class="keyboard-guide">
-            <h3>Keyboard Controls</h3>
-            <div class="key-grid">
-                <div class="key-item"><span class="key-label">A Button</span><span class="key-value">X</span></div>
-                <div class="key-item"><span class="key-label">B Button</span><span class="key-value">Z</span></div>
-                <div class="key-item"><span class="key-label">Start</span><span class="key-value">Enter</span></div>
-                <div class="key-item"><span class="key-label">Z Trigger</span><span class="key-value">A</span></div>
-                <div class="key-item"><span class="key-label">L Shoulder</span><span class="key-value">Q</span></div>
-                <div class="key-item"><span class="key-label">R Shoulder</span><span class="key-value">E</span></div>
-                <div class="key-item"><span class="key-label">D-Pad</span><span class="key-value">Arrow Keys</span></div>
-                <div class="key-item"><span class="key-label">Analog Stick</span><span class="key-value">W A S D</span></div>
-                <div class="key-item"><span class="key-label">C-Up</span><span class="key-value">I</span></div>
-                <div class="key-item"><span class="key-label">C-Down</span><span class="key-value">K</span></div>
-                <div class="key-item"><span class="key-label">C-Left</span><span class="key-value">J</span></div>
-                <div class="key-item"><span class="key-label">C-Right</span><span class="key-value">L</span></div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="footer">
-        <p>N64 Vault - Powered by <a href="https://github.com/nbarkhina/N64Wasm" target="_blank">N64Wasm</a></p>
-        <p>For personal use only. Please use legally obtained ROM files.</p>
-    </div>
-    
-    <!-- N64Wasm Scripts - These must be in the same directory -->
-    <script src="settings.js"></script>
-    <script src="script.js"></script>
-    
-    <script>
-        // Status management
-        function setStatus(text, state) {
-            document.getElementById('statusText').textContent = text;
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = 'status-indicator';
-            if (state) indicator.classList.add(state);
+  <div id="game"></div>
+  
+  <div id="status-overlay">
+    <div class="spinner"></div>
+    <div id="status-text">Waiting for ROM...</div>
+  </div>
+  
+  <div id="controls-bar">
+    <button class="ctrl-btn" id="load-btn">Load ROM</button>
+  </div>
+  
+  <input type="file" id="rom-file-input" accept=".z64,.n64,.v64,.rom,.zip">
+
+  <script>
+    (function() {
+      'use strict';
+      
+      var isInIframe = window.parent !== window;
+      var origin = window.location.origin;
+      var emulatorStarted = false;
+      
+      if (isInIframe) {
+        document.body.classList.add('embedded');
+      }
+      
+      function sendToParent(msg) {
+        if (isInIframe) {
+          try {
+            window.parent.postMessage(msg, origin);
+          } catch (e) {
+            console.error('postMessage error:', e);
+          }
+        }
+      }
+      
+      function setStatus(text, showSpinner) {
+        var overlay = document.getElementById('status-overlay');
+        var textEl = document.getElementById('status-text');
+        if (overlay && textEl) {
+          textEl.textContent = text;
+          var spinner = overlay.querySelector('.spinner');
+          if (spinner) {
+            spinner.style.display = showSpinner ? 'block' : 'none';
+          }
+          overlay.classList.remove('hidden');
+        }
+      }
+      
+      function hideStatus() {
+        var overlay = document.getElementById('status-overlay');
+        if (overlay) {
+          overlay.classList.add('hidden');
+        }
+      }
+      
+      function startEmulator(romBlob, romName) {
+        if (emulatorStarted) {
+          window.location.reload();
+          return;
         }
         
-        // Wait for module initialization
-        var initCheckInterval = setInterval(function() {
-            if (window.myClass && !window.myClass.rivetsData.moduleInitializing) {
-                clearInterval(initCheckInterval);
-                setStatus('Ready! Drop a ROM file to play.', 'ready');
-            }
-        }, 100);
+        setStatus('Starting emulator...', true);
         
-        // Timeout for initialization
-        setTimeout(function() {
-            if (!window.myClass || window.myClass.rivetsData.moduleInitializing) {
-                setStatus('Initialization taking longer than expected...', 'loading');
-            }
-        }, 5000);
+        var romUrl = URL.createObjectURL(romBlob);
         
-        // File upload handling
-        var uploadZone = document.getElementById('uploadZone');
-        var fileInput = document.getElementById('file-upload-main');
+        window.EJS_player = '#game';
+        window.EJS_core = 'n64';
+        window.EJS_gameUrl = romUrl;
+        window.EJS_gameName = romName || 'N64 Game';
+        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        window.EJS_startOnLoaded = true;
+        window.EJS_color = '#E43F5A';
+        window.EJS_backgroundColor = '#0F0F23';
         
-        uploadZone.addEventListener('click', function() {
-            fileInput.click();
-        });
+        window.EJS_onGameStart = function() {
+          console.log('Game started');
+          hideStatus();
+          emulatorStarted = true;
+          sendToParent({ type: 'stateChange', state: 'running' });
+        };
         
-        uploadZone.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            uploadZone.classList.add('dragover');
-        });
-        
-        uploadZone.addEventListener('dragleave', function() {
-            uploadZone.classList.remove('dragover');
-        });
-        
-        uploadZone.addEventListener('drop', function(e) {
-            e.preventDefault();
-            uploadZone.classList.remove('dragover');
-            var files = e.dataTransfer.files;
-            if (files.length > 0) {
-                loadRomFile(files[0]);
-            }
-        });
-        
-        fileInput.addEventListener('change', function(e) {
-            if (e.target.files.length > 0) {
-                loadRomFile(e.target.files[0]);
-            }
-        });
-        
-        function loadRomFile(file) {
-            var validExtensions = ['.z64', '.n64', '.v64', '.rom'];
-            var ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-            
-            if (!validExtensions.includes(ext)) {
-                setStatus('Invalid file format. Please use .z64, .n64, .v64, or .rom files.', 'error');
-                return;
-            }
-            
-            setStatus('Loading ROM: ' + file.name + '...', 'loading');
-            
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var byteArray = new Uint8Array(e.target.result);
-                startEmulator(file.name, byteArray);
-            };
-            reader.onerror = function() {
-                setStatus('Failed to read ROM file.', 'error');
-            };
-            reader.readAsArrayBuffer(file);
+        var loaderScript = document.createElement('script');
+        loaderScript.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+        loaderScript.onload = function() {
+          console.log('EmulatorJS loaded');
+          sendToParent({ type: 'emulatorReady' });
+        };
+        loaderScript.onerror = function() {
+          setStatus('Failed to load emulator. Check your internet connection.', false);
+          sendToParent({ type: 'error', message: 'CDN load failed' });
+        };
+        document.body.appendChild(loaderScript);
+      }
+      
+      function loadRomData(arrayBuffer, name) {
+        console.log('ROM received:', name, arrayBuffer.byteLength, 'bytes');
+        setStatus('Loading ROM...', true);
+        var blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+        startEmulator(blob, name);
+      }
+      
+      function handleFileSelect(file) {
+        setStatus('Reading file...', true);
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          loadRomData(e.target.result, file.name);
+        };
+        reader.onerror = function() {
+          setStatus('Failed to read file.', false);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+      
+      document.getElementById('load-btn').addEventListener('click', function() {
+        document.getElementById('rom-file-input').click();
+      });
+      
+      document.getElementById('rom-file-input').addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (file) {
+          handleFileSelect(file);
         }
-        
-        function startEmulator(filename, byteArray) {
-            if (!window.myClass) {
-                setStatus('Emulator not initialized. Please refresh the page.', 'error');
-                return;
-            }
-            
-            try {
-                setStatus('Starting ' + filename + '...', 'loading');
-                window.myClass.rom_name = filename;
-                document.getElementById('uploadZone').style.display = 'none';
-                document.getElementById('canvasDiv').style.display = 'block';
-                window.myClass.LoadEmulator(byteArray);
-                setStatus('Playing: ' + filename, 'ready');
-            } catch (err) {
-                setStatus('Error: ' + err.message, 'error');
-                console.error('Emulator error:', err);
-            }
+      });
+      
+      window.addEventListener('message', function(e) {
+        if (e.origin !== origin && e.origin !== window.location.origin) {
+          return;
         }
-        
-        // Control buttons
-        document.getElementById('btnFullscreen').addEventListener('click', function() {
-            var canvas = document.getElementById('canvas');
-            if (canvas.requestFullscreen) {
-                canvas.requestFullscreen();
-            } else if (canvas.webkitRequestFullscreen) {
-                canvas.webkitRequestFullscreen();
-            } else if (canvas.mozRequestFullScreen) {
-                canvas.mozRequestFullScreen();
-            }
-        });
-        
-        document.getElementById('btnReset').addEventListener('click', function() {
-            if (window.myClass && window.myClass.resetGame) {
-                window.myClass.resetGame();
-            } else {
-                location.reload();
-            }
-        });
-        
-        var isMuted = false;
-        document.getElementById('btnMute').addEventListener('click', function() {
-            isMuted = !isMuted;
-            if (window.myClass && window.myClass.gainNode) {
-                window.myClass.gainNode.gain.value = isMuted ? 0 : 0.5;
-            }
-            this.textContent = isMuted ? '🔇 Muted' : '🔊 Sound';
-        });
-    </script>
+        var data = e.data;
+        if (data && data.type === 'loadRom' && data.romData) {
+          loadRomData(data.romData, data.romName);
+        } else if (data && data.type === 'ping') {
+          sendToParent({ type: 'pong', ready: emulatorStarted });
+        }
+      });
+      
+      sendToParent({ type: 'iframeLoaded' });
+      setStatus('Select a ROM to start playing', false);
+    })();
+  </script>
 </body>
 </html>
