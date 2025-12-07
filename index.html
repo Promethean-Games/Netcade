@@ -191,10 +191,221 @@
             height: 500px;
         }
         
-        .keyboard-guide {
-            margin-top: 8px;
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 4px;
         }
         
+        .tab-button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+        }
+        
+        .tab-button.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .tab-button svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Control Mapping */
+        .mapping-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .mapping-title {
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--primary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .mapping-title svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .mapping-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--secondary);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-element);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .mapping-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .mapping-group {
+            margin-bottom: 16px;
+        }
+        
+        .mapping-group-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+        
+        .key-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-element);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .key-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(228, 63, 90, 0.3);
+        }
+        
+        .key-item.listening {
+            border-color: var(--primary);
+            background: rgba(228, 63, 90, 0.1);
+            animation: listening-pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes listening-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(228, 63, 90, 0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(228, 63, 90, 0.1); }
+        }
+        
+        .key-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .key-value {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--primary);
+            background: rgba(228, 63, 90, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 500;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .key-value.listening {
+            background: var(--primary);
+            color: white;
+            animation: blink 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Reference Section */
         .keyboard-guide h3 {
             font-family: 'Rajdhani', sans-serif;
             color: var(--primary);
@@ -225,37 +436,22 @@
             }
         }
         
-        .key-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: var(--bg-element);
-            border: 1px solid rgba(255, 255, 255, 0.04);
+        .info-box {
+            background: rgba(228, 63, 90, 0.1);
+            border: 1px solid rgba(228, 63, 90, 0.2);
             border-radius: 10px;
-            transition: all 0.2s ease;
+            padding: 16px;
+            margin-top: 16px;
         }
         
-        .key-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(228, 63, 90, 0.2);
-        }
-        
-        .key-label {
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 500;
+        .info-box p {
             color: var(--text-muted);
             font-size: 0.9rem;
+            margin: 0;
         }
         
-        .key-value {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.85rem;
+        .info-box strong {
             color: var(--primary);
-            background: rgba(228, 63, 90, 0.1);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 500;
         }
         
         .footer {
@@ -279,6 +475,8 @@
         .footer a:hover {
             color: var(--secondary);
         }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -308,26 +506,80 @@
             <div id="game"></div>
         </div>
         
-        <div class="card keyboard-guide">
-            <h3>
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-                Keyboard Controls (EmulatorJS Default)
-            </h3>
-            <div class="key-grid">
-                <div class="key-item"><span class="key-label">A Button</span><span class="key-value">X</span></div>
-                <div class="key-item"><span class="key-label">B Button</span><span class="key-value">Z</span></div>
-                <div class="key-item"><span class="key-label">Start</span><span class="key-value">Enter</span></div>
-                <div class="key-item"><span class="key-label">L Trigger</span><span class="key-value">Q</span></div>
-                <div class="key-item"><span class="key-label">R Trigger</span><span class="key-value">E</span></div>
-                <div class="key-item"><span class="key-label">Z Trigger</span><span class="key-value">C</span></div>
-                <div class="key-item"><span class="key-label">D-Pad</span><span class="key-value">Arrows</span></div>
-                <div class="key-item"><span class="key-label">Analog</span><span class="key-value">WASD</span></div>
-                <div class="key-item"><span class="key-label">C-Up</span><span class="key-value">I</span></div>
-                <div class="key-item"><span class="key-label">C-Down</span><span class="key-value">K</span></div>
-                <div class="key-item"><span class="key-label">C-Left</span><span class="key-value">J</span></div>
-                <div class="key-item"><span class="key-label">C-Right</span><span class="key-value">L</span></div>
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="mapping">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Control Mapping
+                </button>
+                <button class="tab-button" data-tab="reference">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                    Default Reference
+                </button>
+            </div>
+            
+            <div class="tab-content active" id="tab-mapping">
+                <div class="mapping-header">
+                    <div class="mapping-title">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Click any button to remap
+                    </div>
+                    <div class="mapping-actions">
+                        <button class="btn btn-secondary" id="resetMappings">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Reset
+                        </button>
+                        <button class="btn btn-primary" id="saveMappings">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                            </svg>
+                            Save
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="mappingContainer"></div>
+                
+                <div class="info-box">
+                    <p><strong>Tip:</strong> Your custom mappings are saved to your browser and will be applied when you start a game. Press Escape to cancel remapping.</p>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="tab-reference">
+                <div class="keyboard-guide">
+                    <h3>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        EmulatorJS Default Controls
+                    </h3>
+                    <div class="key-grid">
+                        <div class="key-item"><span class="key-label">A Button</span><span class="key-value">X</span></div>
+                        <div class="key-item"><span class="key-label">B Button</span><span class="key-value">Z</span></div>
+                        <div class="key-item"><span class="key-label">Start</span><span class="key-value">Enter</span></div>
+                        <div class="key-item"><span class="key-label">L Trigger</span><span class="key-value">Q</span></div>
+                        <div class="key-item"><span class="key-label">R Trigger</span><span class="key-value">E</span></div>
+                        <div class="key-item"><span class="key-label">Z Trigger</span><span class="key-value">C</span></div>
+                        <div class="key-item"><span class="key-label">D-Pad</span><span class="key-value">Arrows</span></div>
+                        <div class="key-item"><span class="key-label">Analog</span><span class="key-value">WASD</span></div>
+                        <div class="key-item"><span class="key-label">C-Up</span><span class="key-value">I</span></div>
+                        <div class="key-item"><span class="key-label">C-Down</span><span class="key-value">K</span></div>
+                        <div class="key-item"><span class="key-label">C-Left</span><span class="key-value">J</span></div>
+                        <div class="key-item"><span class="key-label">C-Right</span><span class="key-value">L</span></div>
+                    </div>
+                    <div class="info-box">
+                        <p><strong>Note:</strong> These are the default EmulatorJS controls. You can also access the emulator's built-in settings menu during gameplay to customize controls.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -347,6 +599,197 @@
             var statusText = document.getElementById('statusText');
             var emulatorContainer = document.getElementById('emulator-container');
             var emulatorLoaded = false;
+            
+            var defaultMappings = {
+                a: 'KeyX',
+                b: 'KeyZ',
+                start: 'Enter',
+                z: 'KeyC',
+                l: 'KeyQ',
+                r: 'KeyE',
+                cUp: 'KeyI',
+                cDown: 'KeyK',
+                cLeft: 'KeyJ',
+                cRight: 'KeyL',
+                dUp: 'ArrowUp',
+                dDown: 'ArrowDown',
+                dLeft: 'ArrowLeft',
+                dRight: 'ArrowRight',
+                stickUp: 'KeyW',
+                stickDown: 'KeyS',
+                stickLeft: 'KeyA',
+                stickRight: 'KeyD'
+            };
+            
+            var buttonGroups = [
+                { title: 'Action Buttons', keys: ['a', 'b', 'start', 'z'] },
+                { title: 'Shoulder Buttons', keys: ['l', 'r'] },
+                { title: 'C-Buttons', keys: ['cUp', 'cDown', 'cLeft', 'cRight'] },
+                { title: 'D-Pad', keys: ['dUp', 'dDown', 'dLeft', 'dRight'] },
+                { title: 'Analog Stick', keys: ['stickUp', 'stickDown', 'stickLeft', 'stickRight'] }
+            ];
+            
+            var buttonLabels = {
+                a: 'A Button',
+                b: 'B Button',
+                start: 'Start',
+                z: 'Z Trigger',
+                l: 'L Trigger',
+                r: 'R Trigger',
+                cUp: 'C-Up',
+                cDown: 'C-Down',
+                cLeft: 'C-Left',
+                cRight: 'C-Right',
+                dUp: 'D-Up',
+                dDown: 'D-Down',
+                dLeft: 'D-Left',
+                dRight: 'D-Right',
+                stickUp: 'Stick Up',
+                stickDown: 'Stick Down',
+                stickLeft: 'Stick Left',
+                stickRight: 'Stick Right'
+            };
+            
+            var currentMappings = loadMappings();
+            var listeningKey = null;
+            
+            function loadMappings() {
+                try {
+                    var saved = localStorage.getItem('n64vault_control_mappings');
+                    if (saved) {
+                        return JSON.parse(saved);
+                    }
+                } catch (e) {}
+                return Object.assign({}, defaultMappings);
+            }
+            
+            function saveMappings() {
+                try {
+                    localStorage.setItem('n64vault_control_mappings', JSON.stringify(currentMappings));
+                } catch (e) {}
+            }
+            
+            function formatKeyName(code) {
+                if (code.startsWith('Key')) return code.slice(3);
+                if (code.startsWith('Digit')) return code.slice(5);
+                if (code.startsWith('Arrow')) return code.slice(5);
+                if (code === 'Space') return 'Space';
+                if (code === 'ShiftLeft' || code === 'ShiftRight') return 'Shift';
+                if (code === 'ControlLeft' || code === 'ControlRight') return 'Ctrl';
+                if (code === 'AltLeft' || code === 'AltRight') return 'Alt';
+                if (code === 'Enter') return 'Enter';
+                if (code === 'Backspace') return 'Bksp';
+                if (code === 'Tab') return 'Tab';
+                return code;
+            }
+            
+            function renderMappings() {
+                var container = document.getElementById('mappingContainer');
+                container.innerHTML = '';
+                
+                buttonGroups.forEach(function(group) {
+                    var groupDiv = document.createElement('div');
+                    groupDiv.className = 'mapping-group';
+                    
+                    var title = document.createElement('div');
+                    title.className = 'mapping-group-title';
+                    title.textContent = group.title;
+                    groupDiv.appendChild(title);
+                    
+                    var grid = document.createElement('div');
+                    grid.className = 'mapping-grid';
+                    
+                    group.keys.forEach(function(key) {
+                        var item = document.createElement('div');
+                        item.className = 'key-item';
+                        item.setAttribute('data-key', key);
+                        
+                        if (listeningKey === key) {
+                            item.classList.add('listening');
+                        }
+                        
+                        var label = document.createElement('span');
+                        label.className = 'key-label';
+                        label.textContent = buttonLabels[key];
+                        
+                        var value = document.createElement('span');
+                        value.className = 'key-value';
+                        if (listeningKey === key) {
+                            value.classList.add('listening');
+                            value.textContent = 'Press key...';
+                        } else {
+                            value.textContent = formatKeyName(currentMappings[key]);
+                        }
+                        
+                        item.appendChild(label);
+                        item.appendChild(value);
+                        
+                        item.addEventListener('click', function() {
+                            startListening(key);
+                        });
+                        
+                        grid.appendChild(item);
+                    });
+                    
+                    groupDiv.appendChild(grid);
+                    container.appendChild(groupDiv);
+                });
+            }
+            
+            function startListening(key) {
+                listeningKey = key;
+                renderMappings();
+            }
+            
+            function stopListening() {
+                listeningKey = null;
+                renderMappings();
+            }
+            
+            function handleKeyDown(e) {
+                if (!listeningKey) return;
+                
+                e.preventDefault();
+                
+                if (e.code === 'Escape') {
+                    stopListening();
+                    return;
+                }
+                
+                currentMappings[listeningKey] = e.code;
+                stopListening();
+            }
+            
+            document.addEventListener('keydown', handleKeyDown);
+            
+            document.getElementById('resetMappings').addEventListener('click', function() {
+                currentMappings = Object.assign({}, defaultMappings);
+                renderMappings();
+                setStatus('Mappings reset to defaults', 'ready');
+            });
+            
+            document.getElementById('saveMappings').addEventListener('click', function() {
+                saveMappings();
+                setStatus('Control mappings saved!', 'ready');
+            });
+            
+            document.querySelectorAll('.tab-button').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var tabId = btn.getAttribute('data-tab');
+                    
+                    document.querySelectorAll('.tab-button').forEach(function(b) {
+                        b.classList.remove('active');
+                    });
+                    btn.classList.add('active');
+                    
+                    document.querySelectorAll('.tab-content').forEach(function(content) {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById('tab-' + tabId).classList.add('active');
+                });
+            });
+            
+            renderMappings();
             
             function setStatus(text, state) {
                 statusText.textContent = text;
