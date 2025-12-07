@@ -1628,6 +1628,134 @@
         
         // ===== Emulator =====
         var emulatorLoaded = false;
+        var pressedGameKeys = {};
+        
+        // EmulatorJS expects these key codes for N64 buttons
+        var ejsKeyMap = {
+            a: { key: 'x', code: 'KeyX', keyCode: 88 },
+            b: { key: 'z', code: 'KeyZ', keyCode: 90 },
+            start: { key: 'Enter', code: 'Enter', keyCode: 13 },
+            z: { key: 'Shift', code: 'ShiftLeft', keyCode: 16 },
+            l: { key: 'q', code: 'KeyQ', keyCode: 81 },
+            r: { key: 'e', code: 'KeyE', keyCode: 69 },
+            cUp: { key: 'i', code: 'KeyI', keyCode: 73 },
+            cDown: { key: 'k', code: 'KeyK', keyCode: 75 },
+            cLeft: { key: 'j', code: 'KeyJ', keyCode: 74 },
+            cRight: { key: 'l', code: 'KeyL', keyCode: 76 },
+            stickUp: { key: 'w', code: 'KeyW', keyCode: 87 },
+            stickDown: { key: 's', code: 'KeyS', keyCode: 83 },
+            stickLeft: { key: 'a', code: 'KeyA', keyCode: 65 },
+            stickRight: { key: 'd', code: 'KeyD', keyCode: 68 },
+            dUp: { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+            dDown: { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+            dLeft: { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
+            dRight: { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 }
+        };
+        
+        var stickState = { up: false, down: false, left: false, right: false };
+        var stickButtons = ['stickUp', 'stickDown', 'stickLeft', 'stickRight'];
+        
+        function buildReverseKeyMap() {
+            var reverseMap = {};
+            var buttons = ['a', 'b', 'start', 'z', 'l', 'r', 'cUp', 'cDown', 'cLeft', 'cRight', 'dUp', 'dDown', 'dLeft', 'dRight', 'stickUp', 'stickDown', 'stickLeft', 'stickRight'];
+            for (var i = 0; i < buttons.length; i++) {
+                var btn = buttons[i];
+                var userKey = state.keyboardMap[btn];
+                if (userKey) {
+                    reverseMap[userKey.toLowerCase()] = btn;
+                }
+            }
+            return reverseMap;
+        }
+        
+        function simulateEmulatorKey(n64Button, eventType) {
+            var keyData = ejsKeyMap[n64Button];
+            if (!keyData) return;
+            
+            var event = new KeyboardEvent(eventType, {
+                key: keyData.key,
+                code: keyData.code,
+                keyCode: keyData.keyCode,
+                which: keyData.keyCode,
+                bubbles: true,
+                cancelable: true
+            });
+            
+            var canvas = document.querySelector('#game canvas');
+            if (canvas) {
+                canvas.dispatchEvent(event);
+            } else {
+                document.dispatchEvent(event);
+            }
+        }
+        
+        function updateStickSimulation() {
+            // For analog stick, simulate W/A/S/D keys based on direction state
+            if (stickState.up) simulateEmulatorKey('stickUp', 'keydown');
+            else simulateEmulatorKey('stickUp', 'keyup');
+            
+            if (stickState.down) simulateEmulatorKey('stickDown', 'keydown');
+            else simulateEmulatorKey('stickDown', 'keyup');
+            
+            if (stickState.left) simulateEmulatorKey('stickLeft', 'keydown');
+            else simulateEmulatorKey('stickLeft', 'keyup');
+            
+            if (stickState.right) simulateEmulatorKey('stickRight', 'keydown');
+            else simulateEmulatorKey('stickRight', 'keyup');
+        }
+        
+        function handleGameKeyDown(e) {
+            if (!state.gameRunning) return;
+            if (state.listeningKey) return; // In mapping mode
+            
+            var targetTag = e.target.tagName.toLowerCase();
+            if (targetTag === 'input' || targetTag === 'textarea') return;
+            
+            var reverseMap = buildReverseKeyMap();
+            var n64Button = reverseMap[e.code.toLowerCase()];
+            
+            if (n64Button && !pressedGameKeys[e.code]) {
+                e.preventDefault();
+                e.stopPropagation();
+                pressedGameKeys[e.code] = true;
+                
+                if (stickButtons.indexOf(n64Button) !== -1) {
+                    if (n64Button === 'stickUp') stickState.up = true;
+                    else if (n64Button === 'stickDown') stickState.down = true;
+                    else if (n64Button === 'stickLeft') stickState.left = true;
+                    else if (n64Button === 'stickRight') stickState.right = true;
+                    updateStickSimulation();
+                } else {
+                    simulateEmulatorKey(n64Button, 'keydown');
+                }
+            }
+        }
+        
+        function handleGameKeyUp(e) {
+            if (!state.gameRunning) return;
+            
+            var targetTag = e.target.tagName.toLowerCase();
+            if (targetTag === 'input' || targetTag === 'textarea') return;
+            
+            var reverseMap = buildReverseKeyMap();
+            var n64Button = reverseMap[e.code.toLowerCase()];
+            
+            if (n64Button && pressedGameKeys[e.code]) {
+                e.preventDefault();
+                e.stopPropagation();
+                delete pressedGameKeys[e.code];
+                
+                if (stickButtons.indexOf(n64Button) !== -1) {
+                    if (n64Button === 'stickUp') stickState.up = false;
+                    else if (n64Button === 'stickDown') stickState.down = false;
+                    else if (n64Button === 'stickLeft') stickState.left = false;
+                    else if (n64Button === 'stickRight') stickState.right = false;
+                    updateStickSimulation();
+                } else {
+                    simulateEmulatorKey(n64Button, 'keyup');
+                }
+            }
+        }
         
         function loadEmulator(romBlob, romName) {
             if (emulatorLoaded) {
@@ -1703,6 +1831,10 @@
             });
             
             document.addEventListener('keydown', handleKeyDown);
+            
+            // Game keyboard input handlers (translate user mappings to EmulatorJS keys)
+            document.addEventListener('keydown', handleGameKeyDown, true);
+            document.addEventListener('keyup', handleGameKeyUp, true);
             
             document.getElementById('wizardKeyboard').addEventListener('click', function() { startWizard('keyboard'); });
             document.getElementById('resetKeyboard').addEventListener('click', function() {
