@@ -1866,6 +1866,10 @@
             window.EJS_color = '#E43F5A';
             window.EJS_backgroundColor = '#0F0F23';
             
+            // Disable EmulatorJS built-in virtual gamepad (we use our own)
+            window.EJS_Buttons = { gamepad: false };
+            window.EJS_VirtualGamepadSettings = [];
+            
             window.EJS_onGameStart = function() {
                 setStatus('Playing: ' + romName, 'ready');
                 emulatorLoaded = true;
