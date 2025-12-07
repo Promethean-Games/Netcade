@@ -198,6 +198,17 @@
         
         #file-upload { display: none; }
         #emulator-container { display: none; width: 100%; min-height: 500px; margin-bottom: 24px; position: relative; }
+        
+        /* Hide EmulatorJS built-in virtual gamepad - we use our own touch controls */
+        .ejs-virtual-gamepad,
+        .ejs_virtual_gamepad,
+        [class*="virtual-gamepad"],
+        [class*="virtualGamepad"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
         #game { width: 100%; height: 500px; }
         
         /* Input Mode Tabs */
@@ -302,6 +313,18 @@
         .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: var(--text); }
         .btn-wizard { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
         .btn-wizard:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
+        .btn-new-game { 
+            background: linear-gradient(135deg, var(--primary), var(--secondary)); 
+            color: white; 
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+        .btn-new-game:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
         
         .mapping-grid {
@@ -786,6 +809,10 @@
             <div class="status-bar">
                 <div class="status-indicator ready" id="statusIndicator"></div>
                 <span class="status-text" id="statusText">Ready - Select a ROM file to play</span>
+                <button class="btn btn-new-game" id="btnNewGame" style="display: none;">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    New Game
+                </button>
             </div>
             
             <div class="upload-zone" id="uploadZone">
@@ -1011,8 +1038,8 @@
     </div>
     
     <div class="footer">
-        <p>N64 Vault - Powered by <a href="https://emulatorjs.org" target="_blank">EmulatorJS</a></p>
-        <p>For personal use only. Please use legally obtained ROM files.</p>
+        <p>N64 Vault™ by Alan Acevedo</p>
+        <p>Personal use only</p>
     </div>
     
     <script>
@@ -1102,6 +1129,7 @@
             elements.statusIndicator = document.getElementById('statusIndicator');
             elements.statusText = document.getElementById('statusText');
             elements.emulatorContainer = document.getElementById('emulator-container');
+            elements.btnNewGame = document.getElementById('btnNewGame');
             elements.tabKeyboard = document.getElementById('tabKeyboard');
             elements.tabGamepad = document.getElementById('tabGamepad');
             elements.tabMobile = document.getElementById('tabMobile');
@@ -1885,6 +1913,7 @@
                 emulatorLoaded = true;
                 state.gameRunning = true;
                 showRacingControls();
+                elements.btnNewGame.style.display = 'flex';
             };
             
             var script = document.createElement('script');
@@ -1988,6 +2017,11 @@
                 e.preventDefault();
                 toggleRacingControls();
             }, { passive: false });
+            
+            // New Game button - reload the page to start fresh
+            elements.btnNewGame.addEventListener('click', function() {
+                window.location.reload();
+            });
             
             elements.uploadZone.addEventListener('click', function() { elements.fileInput.click(); });
             elements.fileInput.addEventListener('change', function(e) {
