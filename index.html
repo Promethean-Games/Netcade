@@ -406,6 +406,115 @@
         }
       });
       
+      var keyEventData = {
+        'x': { key: 'x', code: 'KeyX', keyCode: 88 },
+        'z': { key: 'z', code: 'KeyZ', keyCode: 90 },
+        'enter': { key: 'Enter', code: 'Enter', keyCode: 13 },
+        'shift': { key: 'Shift', code: 'ShiftLeft', keyCode: 16 },
+        'q': { key: 'q', code: 'KeyQ', keyCode: 81 },
+        'e': { key: 'e', code: 'KeyE', keyCode: 69 },
+        'i': { key: 'i', code: 'KeyI', keyCode: 73 },
+        'k': { key: 'k', code: 'KeyK', keyCode: 75 },
+        'j': { key: 'j', code: 'KeyJ', keyCode: 74 },
+        'l': { key: 'l', code: 'KeyL', keyCode: 76 },
+        'w': { key: 'w', code: 'KeyW', keyCode: 87 },
+        's': { key: 's', code: 'KeyS', keyCode: 83 },
+        'a': { key: 'a', code: 'KeyA', keyCode: 65 },
+        'd': { key: 'd', code: 'KeyD', keyCode: 68 },
+        'arrowup': { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+        'arrowdown': { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+        'arrowleft': { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
+        'arrowright': { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 }
+      };
+      
+      var buttonKeyMap = {
+        'a': 'x',
+        'b': 'z',
+        'start': 'enter',
+        'z': 'shift',
+        'l': 'q',
+        'r': 'e',
+        'cUp': 'i',
+        'cDown': 'k',
+        'cLeft': 'j',
+        'cRight': 'l',
+        'dUp': 'arrowup',
+        'dDown': 'arrowdown',
+        'dLeft': 'arrowleft',
+        'dRight': 'arrowright',
+        'stickUp': 'arrowup',
+        'stickDown': 'arrowdown',
+        'stickLeft': 'arrowleft',
+        'stickRight': 'arrowright'
+      };
+      
+      var pressedButtons = {};
+      
+      function simulateKeyEvent(buttonName, type) {
+        var keyName = buttonKeyMap[buttonName];
+        if (!keyName) return;
+        
+        var keyData = keyEventData[keyName];
+        if (!keyData) return;
+        
+        var isDown = type === 'keydown';
+        
+        if (isDown) {
+          if (pressedButtons[buttonName]) return;
+          pressedButtons[buttonName] = true;
+        } else {
+          if (!pressedButtons[buttonName]) return;
+          delete pressedButtons[buttonName];
+        }
+        
+        var event = new KeyboardEvent(type, {
+          key: keyData.key,
+          code: keyData.code,
+          keyCode: keyData.keyCode,
+          which: keyData.keyCode,
+          bubbles: true,
+          cancelable: true
+        });
+        
+        var canvas = document.querySelector('canvas');
+        if (canvas) {
+          canvas.dispatchEvent(event);
+        } else {
+          document.dispatchEvent(event);
+        }
+      }
+      
+      var joystickState = { up: false, down: false, left: false, right: false };
+      
+      function handleJoystickInput(x, y) {
+        var threshold = 0.25;
+        
+        var newUp = y < -threshold;
+        var newDown = y > threshold;
+        var newLeft = x < -threshold;
+        var newRight = x > threshold;
+        
+        if (newRight !== joystickState.right) {
+          simulateKeyEvent('stickRight', newRight ? 'keydown' : 'keyup');
+          joystickState.right = newRight;
+        }
+        
+        if (newLeft !== joystickState.left) {
+          simulateKeyEvent('stickLeft', newLeft ? 'keydown' : 'keyup');
+          joystickState.left = newLeft;
+        }
+        
+        if (newDown !== joystickState.down) {
+          simulateKeyEvent('stickDown', newDown ? 'keydown' : 'keyup');
+          joystickState.down = newDown;
+        }
+        
+        if (newUp !== joystickState.up) {
+          simulateKeyEvent('stickUp', newUp ? 'keydown' : 'keyup');
+          joystickState.up = newUp;
+        }
+      }
+      
       window.addEventListener('message', function(e) {
         if (e.origin !== origin && e.origin !== window.location.origin) {
           return;
@@ -418,6 +527,16 @@
         } else if (data && data.type === 'focus') {
           var canvas = document.querySelector('canvas');
           if (canvas) canvas.focus();
+        } else if (data && data.type === 'touchInput') {
+          var action = data.action;
+          var button = data.button;
+          if (action === 'press') {
+            simulateKeyEvent(button, 'keydown');
+          } else if (action === 'release') {
+            simulateKeyEvent(button, 'keyup');
+          }
+        } else if (data && data.type === 'joystickInput') {
+          handleJoystickInput(data.x, data.y);
         }
       });
       
