@@ -885,7 +885,7 @@
         var MAX_CONTROLLERS = 4;
         
         var defaultKeyboardMap = {
-            a: 'KeyX', b: 'KeyZ', start: 'Enter', z: 'KeyC',
+            a: 'KeyZ', b: 'KeyX', start: 'Enter', z: 'ShiftLeft',
             l: 'KeyQ', r: 'KeyE',
             cUp: 'KeyI', cDown: 'KeyK', cLeft: 'KeyJ', cRight: 'KeyL',
             dUp: 'ArrowUp', dDown: 'ArrowDown', dLeft: 'ArrowLeft', dRight: 'ArrowRight',
@@ -1502,9 +1502,10 @@
         }
         
         // ===== Emulator Key Simulation (needed for touch controls) =====
+        // Maps N64 buttons to EmulatorJS expected keys (matches n64js/index.html)
         var ejsKeyMap = {
-            a: { key: 'x', code: 'KeyX', keyCode: 88 },
-            b: { key: 'z', code: 'KeyZ', keyCode: 90 },
+            a: { key: 'z', code: 'KeyZ', keyCode: 90 },
+            b: { key: 'x', code: 'KeyX', keyCode: 88 },
             start: { key: 'Enter', code: 'Enter', keyCode: 13 },
             z: { key: 'Shift', code: 'ShiftLeft', keyCode: 16 },
             l: { key: 'q', code: 'KeyQ', keyCode: 81 },
@@ -1654,28 +1655,27 @@
             window.EJS_color = '#E43F5A';
             window.EJS_backgroundColor = '#0F0F23';
             
-            // Fix D-pad left not working - explicit default control mappings for up to 4 players
-            // Control IDs: 0=B, 1=A, 2=Start, 4=DUp, 5=DDown, 6=DLeft, 7=DRight
-            // 8=Z, 9=L, 10=R, 11-14=C-buttons, 19-22=analog
+            // Default control mappings for up to 4 players (matches n64js/index.html)
+            // Control IDs: 0=B, 1=A, 2=Start, 3-6=C-buttons, 7-10=Analog, 11-14=D-pad, 15=L, 16=R, 17=Z
             var defaultControlMapping = {
                 0: { 'value': 'x', 'value2': 'FACE_1' },
-                1: { 'value': 's', 'value2': 'FACE_2' },
+                1: { 'value': 'z', 'value2': 'FACE_2' },
                 2: { 'value': 'enter', 'value2': 'START' },
-                4: { 'value': 'up arrow', 'value2': 'DPAD_UP' },
-                5: { 'value': 'down arrow', 'value2': 'DPAD_DOWN' },
-                6: { 'value': 'left arrow', 'value2': 'DPAD_LEFT' },
-                7: { 'value': 'right arrow', 'value2': 'DPAD_RIGHT' },
-                8: { 'value': 'z', 'value2': 'LEFT_TRIGGER' },
-                9: { 'value': 'q', 'value2': 'LEFT_SHOULDER' },
-                10: { 'value': 'e', 'value2': 'RIGHT_SHOULDER' },
-                11: { 'value': 'i', 'value2': 'FACE_4' },
-                12: { 'value': 'k', 'value2': 'FACE_3' },
-                13: { 'value': 'j', 'value2': 'LEFT_STICK_BUTTON' },
-                14: { 'value': 'l', 'value2': 'RIGHT_STICK_BUTTON' },
-                19: { 'value': 'w' },
-                20: { 'value': 's' },
-                21: { 'value': 'a' },
-                22: { 'value': 'd' },
+                3: { 'value': 'i', 'value2': 'FACE_4' },
+                4: { 'value': 'k', 'value2': 'FACE_3' },
+                5: { 'value': 'j', 'value2': 'LEFT_STICK_BUTTON' },
+                6: { 'value': 'l', 'value2': 'RIGHT_STICK_BUTTON' },
+                7: { 'value': 'w' },
+                8: { 'value': 's' },
+                9: { 'value': 'a' },
+                10: { 'value': 'd' },
+                11: { 'value': 'arrowup', 'value2': 'DPAD_UP' },
+                12: { 'value': 'arrowdown', 'value2': 'DPAD_DOWN' },
+                13: { 'value': 'arrowleft', 'value2': 'DPAD_LEFT' },
+                14: { 'value': 'arrowright', 'value2': 'DPAD_RIGHT' },
+                15: { 'value': 'q', 'value2': 'LEFT_SHOULDER' },
+                16: { 'value': 'e', 'value2': 'RIGHT_SHOULDER' },
+                17: { 'value': 'shift', 'value2': 'LEFT_TRIGGER' },
                 24: { 'value2': 'LEFT_STICK_X:+1' },
                 25: { 'value2': 'LEFT_STICK_X:-1' },
                 26: { 'value2': 'LEFT_STICK_Y:+1' },
