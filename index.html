@@ -1,578 +1,2285 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>N64 Vault - Emulator</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: #0F0F23;
-      font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    #game {
-      width: 100%;
-      height: 100%;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>N64 Vault - Nintendo 64 Emulator</title>
+    <meta name="description" content="Play classic Nintendo 64 games directly in your browser with our sleek, modern emulator">
     
-    /* Hide EmulatorJS's built-in virtual gamepad - we use our own custom touch overlay */
-    .ejs-gamepad,
-    .ejs-virtual-gamepad,
-    [class*="ejs_virtualGamepad"],
-    [class*="ejs_gamepad"] {
-      display: none !important;
-      visibility: hidden !important;
-      pointer-events: none !important;
-    }
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="N64 Vault">
+    <meta name="theme-color" content="#E43F5A">
+    <meta name="msapplication-TileColor" content="#0F0F23">
     
-    #status-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #0F0F23 0%, #1B1B2F 50%, #162447 100%);
-      color: #fff;
-      font-size: 16px;
-      text-align: center;
-      padding: 20px;
-      z-index: 1000;
-    }
-    #status-overlay.hidden {
-      display: none;
-    }
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Rajdhani:wght@400;500;600;700&family=Roboto:wght@400;500&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    .logo-container {
-      margin-bottom: 30px;
-    }
-    .logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 42px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #E43F5A 0%, #E94560 50%, #ff6b7a 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow: 0 0 40px rgba(228, 63, 90, 0.5);
-      letter-spacing: 2px;
-    }
-    .logo-sub {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 14px;
-      color: rgba(255,255,255,0.5);
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      margin-top: 5px;
-    }
-    
-    .spinner {
-      width: 60px;
-      height: 60px;
-      border: 3px solid rgba(228, 63, 90, 0.2);
-      border-top-color: #E43F5A;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 25px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    #status-text {
-      max-width: 350px;
-      line-height: 1.6;
-      font-size: 18px;
-      font-weight: 500;
-      color: rgba(255,255,255,0.9);
-    }
-    
-    .drop-zone {
-      width: 320px;
-      padding: 40px 30px;
-      border: 2px dashed rgba(228, 63, 90, 0.4);
-      border-radius: 16px;
-      background: rgba(228, 63, 90, 0.05);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-top: 30px;
-    }
-    .drop-zone:hover, .drop-zone.dragover {
-      border-color: #E43F5A;
-      background: rgba(228, 63, 90, 0.15);
-      transform: scale(1.02);
-      box-shadow: 0 0 30px rgba(228, 63, 90, 0.3);
-    }
-    .drop-zone-icon {
-      font-size: 48px;
-      margin-bottom: 15px;
-      opacity: 0.8;
-    }
-    .drop-zone-text {
-      font-size: 16px;
-      font-weight: 600;
-      color: #E43F5A;
-      margin-bottom: 8px;
-    }
-    .drop-zone-hint {
-      font-size: 13px;
-      color: rgba(255,255,255,0.5);
-    }
-    
-    #controls-bar {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 12px;
-      z-index: 1001;
-    }
-    .ctrl-btn {
-      background: linear-gradient(135deg, #E43F5A 0%, #E94560 100%);
-      color: #fff;
-      border: none;
-      padding: 14px 28px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 15px rgba(228, 63, 90, 0.3);
-    }
-    .ctrl-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(228, 63, 90, 0.4);
-    }
-    .ctrl-btn:active {
-      transform: translateY(0);
-    }
-    .ctrl-btn:disabled {
-      background: #333;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-    
-    #rom-file-input {
-      display: none;
-    }
-    
-    body.embedded #controls-bar {
-      display: none;
-    }
-    
-    .format-info {
-      margin-top: 20px;
-      padding: 12px 20px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 8px;
-      font-size: 12px;
-      color: rgba(255,255,255,0.4);
-    }
-    .format-info strong {
-      color: rgba(255,255,255,0.6);
-    }
-    
-    .loading-state .drop-zone {
-      display: none;
-    }
-    .loading-state .format-info {
-      display: none;
-    }
-    .idle-state .spinner {
-      display: none;
-    }
-  </style>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #E43F5A;
+            --primary-glow: rgba(228, 63, 90, 0.4);
+            --secondary: #E94560;
+            --bg-dark: #0F0F23;
+            --bg-card: #1B1B2F;
+            --bg-element: #16213E;
+            --accent: #162447;
+            --text: #ffffff;
+            --text-muted: #8892a0;
+            --text-dim: #5a6270;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at top, rgba(22, 36, 71, 0.5) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, rgba(27, 27, 47, 0.5) 0%, transparent 50%);
+            color: var(--text);
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            line-height: 1.5;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .header { text-align: center; margin-bottom: 32px; }
+        
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            text-shadow: 0 0 40px var(--primary-glow);
+        }
+        
+        .header p {
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        .container { max-width: 960px; width: 100%; }
+        
+        /* Main Navigation Tabs */
+        .main-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 4px;
+        }
+        
+        .main-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .main-tab:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+        .main-tab.active { background: rgba(228, 63, 90, 0.2); color: var(--primary); }
+        .main-tab svg { width: 20px; height: 20px; }
+        
+        .main-content { display: none; }
+        .main-content.active { display: block; }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .status-indicator {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+            flex-shrink: 0;
+        }
+        .status-indicator.ready { background: var(--success); }
+        .status-indicator.loading { background: var(--warning); animation: pulse 1.5s ease-in-out infinite; }
+        .status-indicator.error { background: var(--error); }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+        }
+        
+        .status-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        
+        .upload-zone {
+            border: 2px dashed rgba(228, 63, 90, 0.4);
+            border-radius: 16px;
+            padding: 48px 32px;
+            text-align: center;
+            background: rgba(228, 63, 90, 0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 24px;
+        }
+        .upload-zone:hover {
+            background: rgba(228, 63, 90, 0.1);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+        .upload-zone.dragover {
+            background: rgba(228, 63, 90, 0.15);
+            border-color: var(--secondary);
+        }
+        
+        .upload-icon {
+            width: 64px; height: 64px;
+            margin: 0 auto 20px;
+            padding: 16px;
+            background: rgba(228, 63, 90, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-icon svg { width: 32px; height: 32px; color: var(--primary); }
+        
+        .upload-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        .upload-hint { color: var(--text-dim); font-size: 0.9rem; }
+        
+        #file-upload { display: none; }
+        #emulator-container { display: none; width: 100%; min-height: 500px; margin-bottom: 24px; position: relative; }
+        
+        #game { width: 100%; height: 500px; }
+        
+        /* Hide EmulatorJS's built-in virtual gamepad - we use our own custom touch overlay */
+        .ejs-gamepad,
+        .ejs-virtual-gamepad,
+        [class*="ejs_virtualGamepad"],
+        [class*="ejs_gamepad"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        
+        /* Input Mode Tabs */
+        .input-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 4px;
+            overflow-x: auto;
+        }
+        
+        .input-tab {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .input-tab:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+        .input-tab.active { background: var(--primary); color: white; }
+        .input-tab:disabled { opacity: 0.4; cursor: not-allowed; }
+        .input-tab svg { width: 18px; height: 18px; flex-shrink: 0; }
+        
+        .input-content { display: none; }
+        .input-content.active { display: block; }
+        
+        /* Controller Detection Banner */
+        .detection-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+        .detection-banner.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .detection-banner svg { width: 20px; height: 20px; color: var(--success); flex-shrink: 0; }
+        .detection-banner.warning svg { color: var(--warning); }
+        .detection-banner span { font-size: 0.9rem; color: var(--text-muted); }
+        .detection-banner strong { color: var(--text); }
+        
+        /* Controller Tabs for Multi-Controller */
+        .controller-tabs {
+            margin-bottom: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .controller-tabs-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .controller-tabs-header svg { color: var(--primary); }
+        .controller-tabs-list {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .controller-tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .controller-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+        .controller-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .controller-tab .player-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            font-size: 0.75rem;
+        }
+        .controller-tab.active .player-num { background: rgba(255, 255, 255, 0.2); }
+        .controller-tab svg { width: 14px; height: 14px; }
+        
+        /* Mapping UI */
+        .mapping-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .mapping-title {
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--primary);
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .mapping-title svg { width: 18px; height: 18px; }
+        
+        .mapping-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn svg { width: 16px; height: 16px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--secondary); transform: translateY(-1px); }
+        .btn-secondary { background: var(--bg-element); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: var(--text); }
+        .btn-wizard { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+        .btn-wizard:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
+        .btn-new-game { 
+            background: linear-gradient(135deg, var(--primary), var(--secondary)); 
+            color: white; 
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+        .btn-new-game:hover { transform: translateY(-1px); box-shadow: 0 4px 12px var(--primary-glow); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        
+        .mapping-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        @media (max-width: 600px) { .mapping-grid { grid-template-columns: 1fr; } }
+        
+        .mapping-group { margin-bottom: 16px; }
+        .mapping-group-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+        
+        .key-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-element);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .key-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(228, 63, 90, 0.3);
+        }
+        .key-item.listening {
+            border-color: var(--primary);
+            background: rgba(228, 63, 90, 0.1);
+            animation: listening-pulse 1s ease-in-out infinite;
+        }
+        .key-item.completed {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        @keyframes listening-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(228, 63, 90, 0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(228, 63, 90, 0.1); }
+        }
+        
+        .key-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .key-value {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--primary);
+            background: rgba(228, 63, 90, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 500;
+            min-width: 50px;
+            text-align: center;
+        }
+        .key-value.listening {
+            background: var(--primary);
+            color: white;
+            animation: blink 0.5s ease-in-out infinite;
+        }
+        .key-value.gamepad { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Wizard Modal */
+        .wizard-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .wizard-overlay.active { display: flex; }
+        
+        .wizard-modal {
+            background: var(--bg-card);
+            border: 1px solid rgba(228, 63, 90, 0.3);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .wizard-header { margin-bottom: 24px; }
+        .wizard-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+        .wizard-subtitle {
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+        
+        .wizard-progress { margin-bottom: 32px; }
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-element);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        .wizard-current {
+            padding: 24px;
+            background: var(--bg-element);
+            border-radius: 16px;
+            margin-bottom: 24px;
+        }
+        .wizard-button-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .wizard-instruction {
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+        .wizard-input-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            padding: 8px 16px;
+            background: rgba(228, 63, 90, 0.1);
+            border-radius: 8px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--primary);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .wizard-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        /* Mobile Info */
+        .mobile-info {
+            text-align: center;
+            padding: 32px;
+        }
+        .mobile-info svg {
+            width: 64px;
+            height: 64px;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        .mobile-info h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+        }
+        .mobile-info p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            max-width: 400px;
+            margin: 0 auto 16px;
+        }
+        
+        .control-preview {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--bg-element);
+            border-radius: 12px;
+        }
+        .control-preview-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .control-preview-item .preview-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+        }
+        .control-preview-item span {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        .info-box {
+            background: rgba(228, 63, 90, 0.1);
+            border: 1px solid rgba(228, 63, 90, 0.2);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .info-box p { color: var(--text-muted); font-size: 0.9rem; margin: 0; }
+        .info-box strong { color: var(--primary); }
+        
+        .footer {
+            margin-top: auto;
+            padding-top: 32px;
+            text-align: center;
+        }
+        .footer p { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 4px; }
+        .footer a { color: var(--primary); text-decoration: none; }
+        .footer a:hover { color: var(--secondary); }
+        
+        .hidden { display: none !important; }
+        
+        /* Multiplayer Styles */
+        .mp-tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+        .mp-tab {
+            flex: 1; padding: 12px; background: transparent;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: var(--text-muted); font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mp-tab:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .mp-tab.active { background: rgba(228,63,90,0.2); color: var(--primary); border-color: var(--primary); }
+        
+        .mp-panel { display: none; }
+        .mp-panel.active { display: block; }
+        
+        .mp-input-group { margin-bottom: 16px; }
+        .mp-input-group label { display: block; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 6px; }
+        .mp-input {
+            width: 100%; padding: 12px 16px; background: var(--bg-element);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+            color: var(--text); font-family: 'Roboto', sans-serif; font-size: 1rem;
+        }
+        .mp-input:focus { outline: none; border-color: var(--primary); }
+        .mp-input::placeholder { color: var(--text-dim); }
+        
+        .mp-room-code {
+            font-family: 'Roboto Mono', monospace; font-size: 2rem; font-weight: bold;
+            text-align: center; letter-spacing: 0.3em; color: var(--primary);
+            padding: 20px; background: rgba(228,63,90,0.1); border-radius: 12px;
+            margin: 16px 0; cursor: pointer; transition: all 0.2s ease;
+        }
+        .mp-room-code:hover { background: rgba(228,63,90,0.2); }
+        
+        .mp-players { margin: 20px 0; }
+        .mp-player {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; background: rgba(0,0,0,0.2); border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .mp-player-port {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Rajdhani', sans-serif; font-weight: bold;
+        }
+        .mp-player-name { flex: 1; font-weight: 500; }
+        .mp-player-role {
+            font-size: 0.8rem; padding: 4px 8px; border-radius: 4px;
+            background: rgba(255,255,255,0.1); color: var(--text-muted);
+        }
+        .mp-player-role.host { background: rgba(228,63,90,0.2); color: var(--primary); }
+        
+        .mp-status {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px; background: rgba(0,0,0,0.2); border-radius: 8px;
+            margin: 16px 0;
+        }
+        .mp-status-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--warning);
+        }
+        .mp-status-dot.connected { background: var(--success); }
+        .mp-status-dot.error { background: var(--error); }
+        
+        /* Mobile adjustments */
+        @media (max-width: 480px) {
+            body { padding: 16px; }
+            .header h1 { font-size: 2rem; }
+            .card { padding: 16px; }
+        }
+    </style>
 </head>
 <body>
-  <div id="game"></div>
-  
-  <div id="status-overlay" class="idle-state">
-    <div class="logo-container">
-      <div class="logo">N64 VAULT</div>
-      <div class="logo-sub">Web Emulator</div>
+    <div class="header">
+        <h1>N64 Vault</h1>
+        <p>Web-Based Nintendo 64 Emulator</p>
     </div>
     
-    <div class="spinner"></div>
-    <div id="status-text">Drop a ROM file to start playing</div>
-    
-    <div class="drop-zone" id="drop-zone">
-      <div class="drop-zone-icon">🎮</div>
-      <div class="drop-zone-text">Click or Drop ROM Here</div>
-      <div class="drop-zone-hint">Supports .z64, .n64, .v64, .rom, .zip</div>
+    <div class="container">
+        <!-- Main Navigation Tabs -->
+        <div class="main-tabs">
+            <button class="main-tab active" data-main="library" id="mainTabLibrary">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                Game Library
+            </button>
+            <button class="main-tab" data-main="controls" id="mainTabControls">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+                Controls
+            </button>
+            <button class="main-tab" data-main="multiplayer" id="mainTabMultiplayer">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Multiplayer
+            </button>
+        </div>
+        
+        <!-- Library Content -->
+        <div class="main-content active" id="mainContentLibrary">
+            <div class="status-bar">
+                <div class="status-indicator ready" id="statusIndicator"></div>
+                <span class="status-text" id="statusText">Ready - Select a ROM file to play</span>
+                <button class="btn btn-new-game" id="btnNewGame" style="display: none;">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    New Game
+                </button>
+            </div>
+            
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <div class="upload-text">Drop your ROM file here or click to browse</div>
+                <div class="upload-hint">Supports .z64, .n64, .v64, .rom, .zip files</div>
+                <input type="file" id="file-upload" accept=".z64,.n64,.v64,.rom,.zip" />
+            </div>
+            
+            <div id="emulator-container"><div id="game"></div></div>
+        </div>
+        
+        <!-- Controls Content -->
+        <div class="main-content" id="mainContentControls">
+            <div class="card">
+                <div class="input-tabs">
+                <button class="input-tab active" data-mode="keyboard" id="tabKeyboard">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2" stroke-width="2"/><path stroke-width="2" d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+                    Keyboard
+                </button>
+                <button class="input-tab" data-mode="gamepad" id="tabGamepad" disabled>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                    <span id="gamepadTabLabel">USB Controller</span>
+                </button>
+                <button class="input-tab" data-mode="mobile" id="tabMobile" style="display:none;">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" stroke-width="2"/><path stroke-width="2" d="M12 18h.01"/></svg>
+                    Mobile
+                </button>
+            </div>
+            
+            <!-- Keyboard Content -->
+            <div class="input-content active" id="content-keyboard">
+                <div class="mapping-header">
+                    <div class="mapping-title">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Click any button to remap
+                    </div>
+                    <div class="mapping-actions">
+                        <button class="btn btn-wizard" id="wizardKeyboard">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            Quick Setup
+                        </button>
+                        <button class="btn btn-secondary" id="resetKeyboard">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Reset
+                        </button>
+                        <button class="btn btn-primary" id="saveKeyboard">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                            Save
+                        </button>
+                    </div>
+                </div>
+                <div id="keyboardMappings"></div>
+                <div class="info-box">
+                    <p><strong>Tip:</strong> Press Escape to cancel remapping. Your mappings are saved to this browser.</p>
+                </div>
+            </div>
+            
+            <!-- Gamepad Content -->
+            <div class="input-content" id="content-gamepad">
+                <div class="detection-banner" id="gamepadBanner">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span><strong id="gamepadName">Controller</strong> connected</span>
+                </div>
+                
+                <!-- Controller Tabs for Multi-Controller Support -->
+                <div class="controller-tabs" id="controllerTabs" style="display: none;">
+                    <div class="controller-tabs-header">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        <span>Select Controller to Configure:</span>
+                    </div>
+                    <div class="controller-tabs-list" id="controllerTabsList"></div>
+                </div>
+                
+                <!-- Debug Panel -->
+                <div class="debug-panel" id="debugPanel" style="margin: 12px 0; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(228, 63, 90, 0.3); border-radius: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+                        <button class="btn btn-secondary" id="toggleDebug" style="font-size: 0.85rem; padding: 6px 12px;">
+                            Show Debug Info
+                        </button>
+                        <span id="debugHint" style="font-size: 0.75rem; color: var(--text-muted); display: none;">
+                            Press any button on your controller to see raw data
+                        </span>
+                    </div>
+                    <div id="debugContent" style="display: none; font-family: 'Roboto Mono', monospace; font-size: 0.75rem; background: var(--bg-dark); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div style="color: var(--primary); font-weight: 600; margin-bottom: 8px;">Raw Controller Input:</div>
+                        <div style="margin-bottom: 8px;">
+                            <div style="color: var(--text-muted); margin-bottom: 4px;">Active Buttons:</div>
+                            <div id="debugButtons" style="min-height: 24px; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #10b981;">
+                                No buttons pressed
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <div style="color: var(--text-muted); margin-bottom: 4px;">Active Axes (|value| &gt; 0.1):</div>
+                            <div id="debugAxes" style="min-height: 24px; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #f59e0b;">
+                                No axis movement
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <div style="color: var(--text-muted); margin-bottom: 4px;">Last Detected Input:</div>
+                            <div id="debugLastDetected" style="min-height: 24px; padding: 4px 8px; background: rgba(228, 63, 90, 0.2); border-radius: 4px; color: var(--primary); font-weight: 600;">
+                                None yet
+                            </div>
+                        </div>
+                        <div style="color: var(--text-dim); font-size: 0.7rem; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            Tip: Standard D-pad is buttons 12-15. Some controllers use Axis 6/7. If D-pad Left shows as Axis[X] with a specific value, let me know!
+                        </div>
+                    </div>
+                    <div id="debugInstructions" style="display: none; padding: 8px; color: var(--text-muted); font-size: 0.85rem;">
+                        Click on a button to remap (like "D-Left") to start seeing controller debug data.
+                    </div>
+                </div>
+                
+                <div class="mapping-header">
+                    <div class="mapping-title">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Press any button or move stick to remap
+                    </div>
+                    <div class="mapping-actions">
+                        <button class="btn btn-wizard" id="wizardGamepad">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            Quick Setup
+                        </button>
+                        <button class="btn btn-secondary" id="resetGamepad">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            Reset
+                        </button>
+                        <button class="btn btn-primary" id="saveGamepad">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                            Save
+                        </button>
+                    </div>
+                </div>
+                <div id="gamepadMappings"></div>
+                <div class="info-box">
+                    <p><strong>Tip:</strong> Move a stick or press a button when prompted. Supports D-Pad, triggers, and analog sticks.</p>
+                </div>
+            </div>
+            
+            <!-- Mobile Content -->
+            <div class="input-content" id="content-mobile">
+                <div class="mobile-info">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    <h3>Racing Controls</h3>
+                    <p>Minimal touch controls optimized for racing games. Load a ROM and controls will appear automatically.</p>
+                    
+                    <div class="control-preview">
+                        <div class="control-preview-item">
+                            <div class="preview-circle" style="background: linear-gradient(145deg, #E43F5A, #c0354d); width: 50px; height: 50px;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 24px; height: 24px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8M8 12h8m-4-9v18"/></svg>
+                            </div>
+                            <span>Steering</span>
+                        </div>
+                        <div class="control-preview-item">
+                            <div class="preview-circle" style="background: #10b981;">A</div>
+                            <span>Gas</span>
+                        </div>
+                        <div class="control-preview-item">
+                            <div class="preview-circle" style="background: #ef4444;">B</div>
+                            <span>Brake</span>
+                        </div>
+                        <div class="control-preview-item">
+                            <div class="preview-circle" style="background: #f59e0b; color: #1a1a2e;">Z</div>
+                            <span>Item</span>
+                        </div>
+                        <div class="control-preview-item">
+                            <div class="preview-circle" style="background: #374151; font-size: 0.6rem; font-family: 'Rajdhani', sans-serif;">START</div>
+                            <span>Pause</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <p><strong>Racing Mode:</strong> Joystick for steering, A for gas, B for brake, Z for items. Start a game to see the controls!</p>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <!-- Multiplayer Content -->
+        <div class="main-content" id="mainContentMultiplayer">
+            <div class="card">
+                <div class="mp-status" id="mpConnectionStatus">
+                    <div class="mp-status-dot" id="mpStatusDot"></div>
+                    <span id="mpStatusText">Not connected</span>
+                </div>
+                
+                <!-- Create/Join Tabs -->
+                <div id="mpJoinCreate">
+                    <div class="mp-tabs">
+                        <button class="mp-tab active" data-mp="create" id="mpTabCreate">Create Room</button>
+                        <button class="mp-tab" data-mp="join" id="mpTabJoin">Join Room</button>
+                    </div>
+                    
+                    <!-- Create Panel -->
+                    <div class="mp-panel active" id="mpPanelCreate">
+                        <div class="mp-input-group">
+                            <label>Your Name</label>
+                            <input type="text" class="mp-input" id="mpCreateName" placeholder="Enter your name" maxlength="20">
+                        </div>
+                        <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 0.9rem;">
+                            Create a room and share the code with friends. You'll be the host and run the emulator.
+                        </p>
+                        <button class="btn btn-primary" id="mpBtnCreate" style="width: 100%;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Create Room
+                        </button>
+                    </div>
+                    
+                    <!-- Join Panel -->
+                    <div class="mp-panel" id="mpPanelJoin">
+                        <div class="mp-input-group">
+                            <label>Your Name</label>
+                            <input type="text" class="mp-input" id="mpJoinName" placeholder="Enter your name" maxlength="20">
+                        </div>
+                        <div class="mp-input-group">
+                            <label>Room Code</label>
+                            <input type="text" class="mp-input" id="mpJoinCode" placeholder="Enter 6-character code" maxlength="6" style="text-transform: uppercase; letter-spacing: 0.2em; font-family: 'Roboto Mono', monospace;">
+                        </div>
+                        <button class="btn btn-primary" id="mpBtnJoin" style="width: 100%;">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14"/></svg>
+                            Join Room
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Lobby View (hidden initially) -->
+                <div id="mpLobby" style="display: none;">
+                    <p style="color: var(--text-muted); text-align: center; margin-bottom: 8px;">Room Code (click to copy)</p>
+                    <div class="mp-room-code" id="mpRoomCode" title="Click to copy">------</div>
+                    
+                    <h3 style="font-family: 'Rajdhani', sans-serif; margin-bottom: 12px;">Players</h3>
+                    <div class="mp-players" id="mpPlayerList"></div>
+                    
+                    <div class="info-box">
+                        <p><strong>How it works:</strong> The host runs the emulator. Guests send their inputs to the host via WebRTC for low-latency gameplay.</p>
+                    </div>
+                    
+                    <button class="btn btn-secondary" id="mpBtnLeave" style="width: 100%; margin-top: 16px;">
+                        Leave Room
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     
-    <div class="format-info">
-      <strong>Tip:</strong> For best compatibility, use .z64 ROM format
+    <!-- Wizard Modal -->
+    <div class="wizard-overlay" id="wizardOverlay">
+        <div class="wizard-modal">
+            <div class="wizard-header">
+                <div class="wizard-title">Quick Setup</div>
+                <div class="wizard-subtitle" id="wizardMode">Keyboard Mapping</div>
+            </div>
+            <div class="wizard-progress">
+                <div class="progress-bar"><div class="progress-fill" id="wizardProgressBar"></div></div>
+                <div class="progress-text"><span id="wizardStep">1</span> / <span id="wizardTotal">18</span></div>
+            </div>
+            <div class="wizard-current">
+                <div class="wizard-button-name" id="wizardButtonName">A</div>
+                <div class="wizard-instruction" id="wizardInstruction">Press the key for this button</div>
+                <div class="wizard-input-hint" id="wizardHint">Waiting for input...</div>
+            </div>
+            <div class="wizard-actions">
+                <button class="btn btn-secondary" id="wizardSkip">Skip</button>
+                <button class="btn btn-secondary" id="wizardCancel">Cancel</button>
+            </div>
+        </div>
     </div>
-  </div>
-  
-  <div id="controls-bar">
-    <button class="ctrl-btn" id="load-btn">Load ROM</button>
-  </div>
-  
-  <input type="file" id="rom-file-input" accept=".z64,.n64,.v64,.rom,.zip">
-
-  <script>
+    
+    <div class="footer">
+        <p>N64 Vault - Powered by <a href="https://emulatorjs.org" target="_blank">EmulatorJS</a></p>
+        <p>For personal use only. Please use legally obtained ROM files.</p>
+    </div>
+    
+    <script>
     (function() {
-      'use strict';
-      
-      var isInIframe = window.parent !== window;
-      var origin = window.location.origin;
-      var emulatorStarted = false;
-      var overlay = document.getElementById('status-overlay');
-      var statusText = document.getElementById('status-text');
-      var dropZone = document.getElementById('drop-zone');
-      var fileInput = document.getElementById('rom-file-input');
-      
-      if (isInIframe) {
-        document.body.classList.add('embedded');
-      }
-      
-      function sendToParent(msg) {
-        if (isInIframe) {
-          try {
-            window.parent.postMessage(msg, origin);
-          } catch (e) {
-            console.error('postMessage error:', e);
-          }
-        }
-      }
-      
-      function setStatus(text, isLoading) {
-        if (statusText) {
-          statusText.textContent = text;
-        }
-        if (overlay) {
-          overlay.classList.remove('idle-state', 'loading-state', 'hidden');
-          overlay.classList.add(isLoading ? 'loading-state' : 'idle-state');
-        }
-      }
-      
-      function hideStatus() {
-        if (overlay) {
-          overlay.classList.add('hidden');
-        }
-      }
-      
-      function startEmulator(romBlob, romName) {
-        if (emulatorStarted) {
-          window.location.reload();
-          return;
-        }
+        'use strict';
         
-        setStatus('Initializing emulator...', true);
+        // ===== Constants =====
+        var STORAGE_KEY_KEYBOARD = 'n64vault_mappings_keyboard';
+        var STORAGE_KEY_GAMEPAD_PREFIX = 'n64vault_mappings_gamepad_';
+        var MAX_CONTROLLERS = 4;
         
-        var romUrl = URL.createObjectURL(romBlob);
-        
-        window.EJS_player = '#game';
-        window.EJS_core = 'n64';
-        window.EJS_gameUrl = romUrl;
-        window.EJS_gameName = romName || 'N64 Game';
-        window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-        window.EJS_startOnLoaded = true;
-        window.EJS_color = '#E43F5A';
-        window.EJS_backgroundColor = '#0F0F23';
-        
-        // Disable EmulatorJS's built-in virtual gamepad - we use our own custom touch overlay
-        window.EJS_VirtualGamepadSettings = [];
-        window.EJS_Buttons = {
-          playPause: true,
-          restart: true,
-          mute: true,
-          settings: true,
-          fullscreen: true,
-          saveState: true,
-          loadState: true,
-          screenRecord: false,
-          gamepad: false,  // Hide the gamepad settings button
-          cheat: false,
-          volume: true,
-          quickSave: false,
-          quickLoad: false,
-          screenshot: false,
-          cacheManager: false
+        var defaultKeyboardMap = {
+            a: 'KeyZ', b: 'KeyX', start: 'Enter', z: 'ShiftLeft',
+            l: 'KeyQ', r: 'KeyE',
+            cUp: 'KeyI', cDown: 'KeyK', cLeft: 'KeyJ', cRight: 'KeyL',
+            dUp: 'ArrowUp', dDown: 'ArrowDown', dLeft: 'ArrowLeft', dRight: 'ArrowRight',
+            stickUp: 'KeyW', stickDown: 'KeyS', stickLeft: 'KeyA', stickRight: 'KeyD'
         };
         
-        window.EJS_defaultControls = {
-          0: {
-            0: { value: 'x', value2: '' },
-            1: { value: 'z', value2: '' },
-            2: { value: 'enter', value2: '' },
-            3: { value: 'i', value2: '' },
-            4: { value: 'k', value2: '' },
-            5: { value: 'j', value2: '' },
-            6: { value: 'l', value2: '' },
-            7: { value: 'w', value2: '' },
-            8: { value: 's', value2: '' },
-            9: { value: 'a', value2: '' },
-            10: { value: 'd', value2: '' },
-            11: { value: 'arrowup', value2: '' },
-            12: { value: 'arrowdown', value2: '' },
-            13: { value: 'arrowleft', value2: '' },
-            14: { value: 'arrowright', value2: '' },
-            15: { value: 'q', value2: '' },
-            16: { value: 'e', value2: '' },
-            17: { value: 'shift', value2: '' }
-          }
+        var defaultGamepadMap = {
+            a: 'Button:0', b: 'Button:2', start: 'Button:9', z: 'Button:6',
+            l: 'Button:4', r: 'Button:5',
+            cUp: 'Button:12', cDown: 'Button:13', cLeft: 'Button:14', cRight: 'Button:15',
+            dUp: 'Axis:1:-', dDown: 'Axis:1:+', dLeft: 'Axis:0:-', dRight: 'Axis:0:+',
+            stickUp: 'Axis:3:-', stickDown: 'Axis:3:+', stickLeft: 'Axis:2:-', stickRight: 'Axis:2:+'
         };
         
-        window.EJS_onGameStart = function() {
-          console.log('Game started');
-          hideStatus();
-          emulatorStarted = true;
-          sendToParent({ type: 'stateChange', state: 'running' });
+        var buttonGroups = [
+            { title: 'Action Buttons', keys: ['a', 'b', 'start', 'z'] },
+            { title: 'Shoulder Buttons', keys: ['l', 'r'] },
+            { title: 'C-Buttons', keys: ['cUp', 'cDown', 'cLeft', 'cRight'] },
+            { title: 'D-Pad', keys: ['dUp', 'dDown', 'dLeft', 'dRight'] },
+            { title: 'Analog Stick', keys: ['stickUp', 'stickDown', 'stickLeft', 'stickRight'] }
+        ];
+        
+        var buttonLabels = {
+            a: 'A Button', b: 'B Button', start: 'Start', z: 'Z Trigger',
+            l: 'L Trigger', r: 'R Trigger',
+            cUp: 'C-Up', cDown: 'C-Down', cLeft: 'C-Left', cRight: 'C-Right',
+            dUp: 'D-Up', dDown: 'D-Down', dLeft: 'D-Left', dRight: 'D-Right',
+            stickUp: 'Stick Up', stickDown: 'Stick Down', stickLeft: 'Stick Left', stickRight: 'Stick Right'
         };
         
-        setStatus('Loading emulator core...', true);
+        var wizardOrder = ['a', 'b', 'start', 'z', 'l', 'r', 'cUp', 'cDown', 'cLeft', 'cRight', 'dUp', 'dDown', 'dLeft', 'dRight', 'stickUp', 'stickDown', 'stickLeft', 'stickRight'];
         
-        var loaderScript = document.createElement('script');
-        loaderScript.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
-        loaderScript.onload = function() {
-          console.log('EmulatorJS loader ready');
-          setStatus('Preparing ROM...', true);
-          sendToParent({ type: 'emulatorReady' });
+        var gamepadButtonNames = {
+            0: 'A', 1: 'B', 2: 'X', 3: 'Y', 4: 'LB', 5: 'RB', 6: 'LT', 7: 'RT',
+            8: 'Back', 9: 'Start', 10: 'L3', 11: 'R3',
+            12: 'Up', 13: 'Down', 14: 'Left', 15: 'Right', 16: 'Guide'
         };
-        loaderScript.onerror = function() {
-          setStatus('Failed to load emulator. Please check your internet connection.', false);
-          sendToParent({ type: 'error', message: 'CDN load failed' });
-        };
-        document.body.appendChild(loaderScript);
-      }
-      
-      function loadRomData(arrayBuffer, name) {
-        console.log('ROM received:', name, arrayBuffer.byteLength, 'bytes');
-        setStatus('Processing ROM: ' + name, true);
-        var blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-        startEmulator(blob, name);
-      }
-      
-      function handleFileSelect(file) {
-        if (!file) return;
         
-        var validExts = ['.z64', '.n64', '.v64', '.rom', '.zip'];
-        var fileName = file.name.toLowerCase();
-        var isValid = validExts.some(function(ext) {
-          return fileName.endsWith(ext);
-        });
-        
-        if (!isValid) {
-          setStatus('Invalid file format. Please use .z64, .n64, .v64, .rom, or .zip files.', false);
-          return;
+        // ===== State =====
+        function loadGamepadMaps() {
+            var maps = {};
+            for (var i = 0; i < MAX_CONTROLLERS; i++) {
+                maps[i] = loadMap(STORAGE_KEY_GAMEPAD_PREFIX + i, defaultGamepadMap);
+            }
+            return maps;
         }
         
-        setStatus('Reading ' + file.name + '...', true);
-        var reader = new FileReader();
-        reader.onload = function(e) {
-          loadRomData(e.target.result, file.name);
+        var state = {
+            mainTab: 'library',
+            mode: 'keyboard',
+            keyboardMap: loadMap(STORAGE_KEY_KEYBOARD, defaultKeyboardMap),
+            gamepadMaps: loadGamepadMaps(),
+            selectedGamepadIndex: 0,
+            listeningKey: null,
+            listeningMode: null,
+            connectedGamepads: [],
+            wizard: { active: false, index: 0, mode: null },
+            isMobile: false,
+            gameRunning: false,
+            controlsVisible: true,
+            // Multiplayer state
+            mp: {
+                ws: null,
+                connected: false,
+                room: null,
+                localPlayer: null,
+                peers: new Map(),
+                isHost: false
+            }
         };
-        reader.onerror = function() {
-          setStatus('Failed to read file. Please try again.', false);
+        
+        var gamepadPollId = null;
+        var previousButtons = [];
+        var previousAxes = [];
+        var baselineAxes = [];
+        var lastHatDirection = null;
+        var stabilizationFrames = 0;
+        
+        
+        // ===== DOM Elements =====
+        var elements = {};
+        
+        function initElements() {
+            elements.mainTabLibrary = document.getElementById('mainTabLibrary');
+            elements.mainTabControls = document.getElementById('mainTabControls');
+            elements.mainContentLibrary = document.getElementById('mainContentLibrary');
+            elements.mainContentControls = document.getElementById('mainContentControls');
+            elements.uploadZone = document.getElementById('uploadZone');
+            elements.fileInput = document.getElementById('file-upload');
+            elements.statusIndicator = document.getElementById('statusIndicator');
+            elements.statusText = document.getElementById('statusText');
+            elements.emulatorContainer = document.getElementById('emulator-container');
+            elements.btnNewGame = document.getElementById('btnNewGame');
+            elements.tabKeyboard = document.getElementById('tabKeyboard');
+            elements.tabGamepad = document.getElementById('tabGamepad');
+            elements.tabMobile = document.getElementById('tabMobile');
+            elements.gamepadTabLabel = document.getElementById('gamepadTabLabel');
+            elements.contentKeyboard = document.getElementById('content-keyboard');
+            elements.contentGamepad = document.getElementById('content-gamepad');
+            elements.contentMobile = document.getElementById('content-mobile');
+            elements.keyboardMappings = document.getElementById('keyboardMappings');
+            elements.gamepadMappings = document.getElementById('gamepadMappings');
+            elements.gamepadBanner = document.getElementById('gamepadBanner');
+            elements.gamepadName = document.getElementById('gamepadName');
+            elements.wizardOverlay = document.getElementById('wizardOverlay');
+            elements.wizardMode = document.getElementById('wizardMode');
+            elements.wizardProgressBar = document.getElementById('wizardProgressBar');
+            elements.wizardStep = document.getElementById('wizardStep');
+            elements.wizardTotal = document.getElementById('wizardTotal');
+            elements.wizardButtonName = document.getElementById('wizardButtonName');
+            elements.wizardInstruction = document.getElementById('wizardInstruction');
+            elements.wizardHint = document.getElementById('wizardHint');
+            elements.toggleDebug = document.getElementById('toggleDebug');
+            elements.debugHint = document.getElementById('debugHint');
+            elements.debugContent = document.getElementById('debugContent');
+            elements.debugButtons = document.getElementById('debugButtons');
+            elements.debugAxes = document.getElementById('debugAxes');
+            elements.debugLastDetected = document.getElementById('debugLastDetected');
+            elements.debugInstructions = document.getElementById('debugInstructions');
+            elements.controllerTabs = document.getElementById('controllerTabs');
+            elements.controllerTabsList = document.getElementById('controllerTabsList');
+            
+            // Multiplayer elements
+            elements.mainTabMultiplayer = document.getElementById('mainTabMultiplayer');
+            elements.mainContentMultiplayer = document.getElementById('mainContentMultiplayer');
+            elements.mpStatusDot = document.getElementById('mpStatusDot');
+            elements.mpStatusText = document.getElementById('mpStatusText');
+            elements.mpTabCreate = document.getElementById('mpTabCreate');
+            elements.mpTabJoin = document.getElementById('mpTabJoin');
+            elements.mpPanelCreate = document.getElementById('mpPanelCreate');
+            elements.mpPanelJoin = document.getElementById('mpPanelJoin');
+            elements.mpCreateName = document.getElementById('mpCreateName');
+            elements.mpJoinName = document.getElementById('mpJoinName');
+            elements.mpJoinCode = document.getElementById('mpJoinCode');
+            elements.mpBtnCreate = document.getElementById('mpBtnCreate');
+            elements.mpBtnJoin = document.getElementById('mpBtnJoin');
+            elements.mpJoinCreate = document.getElementById('mpJoinCreate');
+            elements.mpLobby = document.getElementById('mpLobby');
+            elements.mpRoomCode = document.getElementById('mpRoomCode');
+            elements.mpPlayerList = document.getElementById('mpPlayerList');
+            elements.mpBtnLeave = document.getElementById('mpBtnLeave');
+        }
+        
+        var debugMode = false;
+        
+        // ===== Utilities =====
+        function loadMap(key, defaultMap) {
+            try {
+                var saved = localStorage.getItem(key);
+                if (saved) return JSON.parse(saved);
+            } catch (e) {}
+            return Object.assign({}, defaultMap);
+        }
+        
+        function saveMap(key, map) {
+            try { localStorage.setItem(key, JSON.stringify(map)); } catch (e) {}
+        }
+        
+        function formatKeyName(code) {
+            if (!code) return '?';
+            if (code.startsWith('Button:')) {
+                var idx = parseInt(code.split(':')[1], 10);
+                return gamepadButtonNames[idx] || 'Btn' + idx;
+            }
+            if (code.startsWith('Axis:')) {
+                var parts = code.split(':');
+                var axisNames = { 0: 'LX', 1: 'LY', 2: 'RX', 3: 'RY' };
+                return (axisNames[parts[1]] || 'Ax' + parts[1]) + (parts[2] === '+' ? '+' : '-');
+            }
+            if (code.startsWith('Hat:')) {
+                var dir = code.split(':')[1];
+                return 'D-Pad ' + dir;
+            }
+            if (code.startsWith('Key')) return code.slice(3);
+            if (code.startsWith('Digit')) return code.slice(5);
+            if (code.startsWith('Arrow')) return code.slice(5);
+            if (code === 'Space') return 'Space';
+            if (code === 'Enter') return 'Enter';
+            return code.replace('Left', '').replace('Right', '');
+        }
+        
+        function setStatus(text, statusClass) {
+            elements.statusText.textContent = text;
+            elements.statusIndicator.className = 'status-indicator';
+            if (statusClass) elements.statusIndicator.classList.add(statusClass);
+        }
+        
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                   (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
+                   ('ontouchstart' in window);
+        }
+        
+        function getShortGamepadName(fullName) {
+            var name = fullName.split(' (')[0];
+            return name.length > 30 ? name.slice(0, 27) + '...' : name;
+        }
+        
+        // ===== Rendering =====
+        function renderMappings(containerId, map, mode) {
+            var container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            buttonGroups.forEach(function(group) {
+                var groupDiv = document.createElement('div');
+                groupDiv.className = 'mapping-group';
+                
+                var title = document.createElement('div');
+                title.className = 'mapping-group-title';
+                title.textContent = group.title;
+                groupDiv.appendChild(title);
+                
+                var grid = document.createElement('div');
+                grid.className = 'mapping-grid';
+                
+                group.keys.forEach(function(key) {
+                    var item = document.createElement('div');
+                    item.className = 'key-item';
+                    item.setAttribute('data-key', key);
+                    item.setAttribute('data-mode', mode);
+                    
+                    if (state.listeningKey === key && state.listeningMode === mode) {
+                        item.classList.add('listening');
+                    }
+                    if (state.wizard.active && state.wizard.mode === mode) {
+                        var wizardIdx = wizardOrder.indexOf(key);
+                        if (wizardIdx < state.wizard.index) {
+                            item.classList.add('completed');
+                        }
+                    }
+                    
+                    var label = document.createElement('span');
+                    label.className = 'key-label';
+                    label.textContent = buttonLabels[key];
+                    
+                    var value = document.createElement('span');
+                    value.className = 'key-value';
+                    if (mode === 'gamepad') value.classList.add('gamepad');
+                    
+                    if (state.listeningKey === key && state.listeningMode === mode) {
+                        value.classList.add('listening');
+                        value.textContent = 'Press...';
+                    } else {
+                        value.textContent = formatKeyName(map[key]);
+                    }
+                    
+                    item.appendChild(label);
+                    item.appendChild(value);
+                    
+                    item.addEventListener('click', function() {
+                        startListening(key, mode);
+                    });
+                    
+                    grid.appendChild(item);
+                });
+                
+                groupDiv.appendChild(grid);
+                container.appendChild(groupDiv);
+            });
+        }
+        
+        function render() {
+            renderMappings('keyboardMappings', state.keyboardMap, 'keyboard');
+            if (state.connectedGamepads.length > 0) {
+                renderMappings('gamepadMappings', getSelectedGamepadMap(), 'gamepad');
+            }
+        }
+        
+        // ===== Input Handling =====
+        function startListening(key, mode) {
+            if (state.wizard.active) return;
+            state.listeningKey = key;
+            state.listeningMode = mode;
+            stabilizationFrames = 0;
+            previousButtons = [];
+            previousAxes = [];
+            render();
+            
+            if (mode === 'gamepad') {
+                startGamepadPoll();
+            }
+        }
+        
+        function stopListening() {
+            state.listeningKey = null;
+            state.listeningMode = null;
+            stopGamepadPoll();
+            render();
+        }
+        
+        function applyInput(code) {
+            var key = state.listeningKey;
+            var mode = state.listeningMode;
+            
+            if (!key || !mode) return;
+            
+            if (mode === 'keyboard') {
+                state.keyboardMap[key] = code;
+            } else {
+                state.gamepadMaps[state.selectedGamepadIndex][key] = code;
+            }
+            
+            if (state.wizard.active) {
+                advanceWizard();
+            } else {
+                stopListening();
+            }
+        }
+        
+        function handleKeyDown(e) {
+            if (state.listeningMode !== 'keyboard' && !(state.wizard.active && state.wizard.mode === 'keyboard')) return;
+            if (!state.listeningKey) return;
+            
+            e.preventDefault();
+            
+            if (e.code === 'Escape') {
+                if (state.wizard.active) {
+                    cancelWizard();
+                } else {
+                    stopListening();
+                }
+                return;
+            }
+            
+            applyInput(e.code);
+        }
+        
+        // ===== Gamepad Handling =====
+        function startGamepadPoll() {
+            if (gamepadPollId) return;
+            stabilizationFrames = 0;
+            previousButtons = [];
+            previousAxes = [];
+            pollGamepad();
+        }
+        
+        function stopGamepadPoll() {
+            if (gamepadPollId) {
+                cancelAnimationFrame(gamepadPollId);
+                gamepadPollId = null;
+            }
+        }
+        
+        function pollGamepad() {
+            if (!state.listeningKey || (state.listeningMode !== 'gamepad' && !(state.wizard.active && state.wizard.mode === 'gamepad'))) {
+                gamepadPollId = null;
+                return;
+            }
+            
+            var gamepads = navigator.getGamepads();
+            var gp = null;
+            
+            // Poll the selected controller if available, otherwise poll any connected controller
+            if (state.connectedGamepads.length > 0) {
+                var selectedGp = state.connectedGamepads[state.selectedGamepadIndex];
+                if (selectedGp) {
+                    gp = gamepads[selectedGp.index];
+                }
+            }
+            
+            // Fallback: if selected controller not available, try any connected controller
+            if (!gp) {
+                for (var i = 0; i < gamepads.length; i++) {
+                    if (gamepads[i] && gamepads[i].connected) {
+                        gp = gamepads[i];
+                        break;
+                    }
+                }
+            }
+            
+            if (!gp) {
+                gamepadPollId = requestAnimationFrame(pollGamepad);
+                return;
+            }
+            
+            // Update debug display
+            if (debugMode) {
+                elements.debugContent.style.display = 'block';
+                elements.debugInstructions.style.display = 'none';
+                
+                // Show active buttons
+                var activeButtons = [];
+                for (var dbi = 0; dbi < gp.buttons.length; dbi++) {
+                    var btn = gp.buttons[dbi];
+                    if (btn.pressed || btn.value > 0.1) {
+                        activeButtons.push('Button[' + dbi + '] = ' + btn.value.toFixed(2) + (btn.pressed ? ' (PRESSED)' : ''));
+                    }
+                }
+                elements.debugButtons.textContent = activeButtons.length ? activeButtons.join('  |  ') : 'No buttons pressed';
+                
+                // Show active axes
+                var activeAxes = [];
+                for (var dai = 0; dai < gp.axes.length; dai++) {
+                    var axisVal = gp.axes[dai];
+                    if (Math.abs(axisVal) > 0.1) {
+                        activeAxes.push('Axis[' + dai + '] = ' + axisVal.toFixed(3));
+                    }
+                }
+                elements.debugAxes.textContent = activeAxes.length ? activeAxes.join('  |  ') : 'No axis movement';
+            }
+            
+            stabilizationFrames++;
+            
+            if (stabilizationFrames <= 15) {
+                previousButtons = gp.buttons.map(function(b) { return b.pressed || b.value > 0.5; });
+                previousAxes = gp.axes.slice();
+                baselineAxes = gp.axes.slice();
+                gamepadPollId = requestAnimationFrame(pollGamepad);
+                return;
+            }
+            
+            for (var bi = 0; bi < gp.buttons.length; bi++) {
+                var wasPressed = previousButtons[bi] || false;
+                var isPressed = gp.buttons[bi].pressed || gp.buttons[bi].value > 0.5;
+                if (isPressed && !wasPressed) {
+                    var inputCode = 'Button:' + bi;
+                    if (debugMode) {
+                        elements.debugLastDetected.textContent = inputCode;
+                    }
+                    applyInput(inputCode);
+                    gamepadPollId = requestAnimationFrame(pollGamepad);
+                    return;
+                }
+            }
+            
+            // Hat switch detection function
+            function getHatDirection(value) {
+                // Standard hat switch values (covers most controllers)
+                if (value >= -1.10 && value <= -0.90) return 'Up';
+                if (value >= -0.55 && value <= -0.35) return 'Right';
+                if (value >= 0.08 && value <= 0.25) return 'Down';
+                if (value >= 0.65 && value <= 0.80) return 'Left';
+                // Diagonal positions
+                if (value >= 0.38 && value <= 0.52) return 'UpRight';
+                if (value >= -0.25 && value <= -0.05) return 'DownRight';
+                if (value >= 0.82 && value <= 0.98) return 'UpLeft';
+                if (value >= 0.22 && value <= 0.38) return 'DownLeft';
+                return null;
+            }
+            
+            var THRESHOLD = 0.6;
+            for (var ai = 0; ai < gp.axes.length; ai++) {
+                var prev = previousAxes[ai] || 0;
+                var curr = gp.axes[ai];
+                var baseline = baselineAxes[ai] || 0;
+                
+                // Check if this is a hat switch axis (resting value > 1.5)
+                var isHatAxis = Math.abs(baseline) > 1.5;
+                
+                if (isHatAxis) {
+                    var hatDir = getHatDirection(curr);
+                    var isAtNeutral = Math.abs(curr - baseline) < 0.05;
+                    
+                    if (hatDir && !isAtNeutral && hatDir !== lastHatDirection) {
+                        // Simplify diagonal to primary direction
+                        var simpleDir = hatDir;
+                        if (hatDir.indexOf('Up') !== -1 && hatDir.length > 2) simpleDir = 'Up';
+                        else if (hatDir.indexOf('Down') !== -1 && hatDir.length > 4) simpleDir = 'Down';
+                        
+                        var hatCode = 'Hat:' + simpleDir;
+                        if (debugMode) {
+                            elements.debugLastDetected.textContent = hatCode;
+                        }
+                        applyInput(hatCode);
+                        lastHatDirection = hatDir;
+                        gamepadPollId = requestAnimationFrame(pollGamepad);
+                        return;
+                    } else if (isAtNeutral) {
+                        lastHatDirection = null;
+                    }
+                } else {
+                    if (curr > THRESHOLD && prev <= THRESHOLD) {
+                        var inputCodePos = 'Axis:' + ai + ':+';
+                        if (debugMode) {
+                            elements.debugLastDetected.textContent = inputCodePos;
+                        }
+                        applyInput(inputCodePos);
+                        gamepadPollId = requestAnimationFrame(pollGamepad);
+                        return;
+                    }
+                    if (curr < -THRESHOLD && prev >= -THRESHOLD) {
+                        var inputCodeNeg = 'Axis:' + ai + ':-';
+                        if (debugMode) {
+                            elements.debugLastDetected.textContent = inputCodeNeg;
+                        }
+                        applyInput(inputCodeNeg);
+                        gamepadPollId = requestAnimationFrame(pollGamepad);
+                        return;
+                    }
+                }
+            }
+            
+            previousButtons = gp.buttons.map(function(b) { return b.pressed || b.value > 0.5; });
+            previousAxes = gp.axes.slice();
+            gamepadPollId = requestAnimationFrame(pollGamepad);
+        }
+        
+        function detectGamepads() {
+            var gamepads = navigator.getGamepads();
+            var connected = [];
+            
+            for (var i = 0; i < gamepads.length && connected.length < MAX_CONTROLLERS; i++) {
+                if (gamepads[i] && gamepads[i].connected) {
+                    connected.push({ index: gamepads[i].index, id: gamepads[i].id, gamepad: gamepads[i] });
+                }
+            }
+            
+            var prevCount = state.connectedGamepads.length;
+            var newCount = connected.length;
+            
+            state.connectedGamepads = connected;
+            
+            if (newCount > 0 && prevCount === 0) {
+                elements.tabGamepad.disabled = false;
+                state.selectedGamepadIndex = 0;
+                updateControllerTabs();
+                updateGamepadBanner();
+                render();
+                setStatus(newCount + ' controller(s) connected', 'ready');
+            } else if (newCount === 0 && prevCount > 0) {
+                elements.tabGamepad.disabled = true;
+                elements.gamepadTabLabel.textContent = 'USB Controller';
+                elements.controllerTabs.style.display = 'none';
+                if (state.mode === 'gamepad') {
+                    switchMode('keyboard');
+                }
+                setStatus('All controllers disconnected', 'ready');
+            } else if (newCount !== prevCount) {
+                if (state.selectedGamepadIndex >= newCount) {
+                    state.selectedGamepadIndex = Math.max(0, newCount - 1);
+                }
+                updateControllerTabs();
+                updateGamepadBanner();
+                render();
+                setStatus(newCount + ' controller(s) connected', 'ready');
+            }
+        }
+        
+        function updateControllerTabs() {
+            var count = state.connectedGamepads.length;
+            
+            if (count <= 1) {
+                elements.controllerTabs.style.display = 'none';
+                if (count === 1) {
+                    elements.gamepadTabLabel.textContent = getShortGamepadName(state.connectedGamepads[0].id);
+                }
+                return;
+            }
+            
+            elements.controllerTabs.style.display = 'block';
+            elements.gamepadTabLabel.textContent = count + ' Controllers';
+            
+            var html = '';
+            for (var i = 0; i < count; i++) {
+                var gp = state.connectedGamepads[i];
+                var isActive = i === state.selectedGamepadIndex;
+                html += '<button class="controller-tab' + (isActive ? ' active' : '') + '" data-index="' + i + '">';
+                html += '<span class="player-num">P' + (i + 1) + '</span>';
+                html += '<span>' + getShortGamepadName(gp.id) + '</span>';
+                html += '</button>';
+            }
+            elements.controllerTabsList.innerHTML = html;
+            
+            elements.controllerTabsList.querySelectorAll('.controller-tab').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    var idx = parseInt(tab.getAttribute('data-index'), 10);
+                    selectController(idx);
+                });
+            });
+        }
+        
+        function selectController(index) {
+            if (index >= 0 && index < state.connectedGamepads.length) {
+                state.selectedGamepadIndex = index;
+                updateControllerTabs();
+                updateGamepadBanner();
+                render();
+            }
+        }
+        
+        function updateGamepadBanner() {
+            if (state.connectedGamepads.length > 0) {
+                var gp = state.connectedGamepads[state.selectedGamepadIndex];
+                if (gp) {
+                    var label = state.connectedGamepads.length > 1 
+                        ? 'Player ' + (state.selectedGamepadIndex + 1) + ': ' + getShortGamepadName(gp.id)
+                        : getShortGamepadName(gp.id);
+                    elements.gamepadName.textContent = label;
+                }
+            }
+        }
+        
+        function getSelectedGamepadMap() {
+            return state.gamepadMaps[state.selectedGamepadIndex] || state.gamepadMaps[0];
+        }
+        
+        // ===== Wizard =====
+        function startWizard(mode) {
+            state.wizard = { active: true, index: 0, mode: mode };
+            state.listeningKey = wizardOrder[0];
+            state.listeningMode = mode;
+            
+            elements.wizardOverlay.classList.add('active');
+            elements.wizardMode.textContent = mode === 'keyboard' ? 'Keyboard Mapping' : 'Controller Mapping';
+            elements.wizardTotal.textContent = wizardOrder.length;
+            elements.wizardInstruction.textContent = mode === 'keyboard' ? 'Press the key for this button' : 'Press a button or move a stick';
+            
+            updateWizardUI();
+            render();
+            
+            if (mode === 'gamepad') {
+                startGamepadPoll();
+            }
+        }
+        
+        function advanceWizard() {
+            state.wizard.index++;
+            
+            if (state.wizard.index >= wizardOrder.length) {
+                completeWizard();
+                return;
+            }
+            
+            state.listeningKey = wizardOrder[state.wizard.index];
+            stabilizationFrames = 0;
+            previousButtons = [];
+            previousAxes = [];
+            updateWizardUI();
+            render();
+            
+            if (state.wizard.mode === 'gamepad') {
+                startGamepadPoll();
+            }
+        }
+        
+        function skipWizardStep() {
+            advanceWizard();
+        }
+        
+        function cancelWizard() {
+            state.wizard = { active: false, index: 0, mode: null };
+            state.listeningKey = null;
+            state.listeningMode = null;
+            elements.wizardOverlay.classList.remove('active');
+            stopGamepadPoll();
+            render();
+        }
+        
+        function completeWizard() {
+            state.wizard = { active: false, index: 0, mode: null };
+            state.listeningKey = null;
+            state.listeningMode = null;
+            elements.wizardOverlay.classList.remove('active');
+            stopGamepadPoll();
+            render();
+            setStatus('Quick Setup complete! Don\'t forget to save.', 'ready');
+        }
+        
+        function updateWizardUI() {
+            var key = wizardOrder[state.wizard.index];
+            var progress = ((state.wizard.index) / wizardOrder.length) * 100;
+            
+            elements.wizardStep.textContent = state.wizard.index + 1;
+            elements.wizardProgressBar.style.width = progress + '%';
+            elements.wizardButtonName.textContent = buttonLabels[key];
+            elements.wizardHint.textContent = 'Waiting for input...';
+        }
+        
+        // ===== Tab Switching =====
+        function switchMainTab(tab) {
+            state.mainTab = tab;
+            
+            elements.mainTabLibrary.classList.toggle('active', tab === 'library');
+            elements.mainTabControls.classList.toggle('active', tab === 'controls');
+            elements.mainTabMultiplayer.classList.toggle('active', tab === 'multiplayer');
+            elements.mainContentLibrary.classList.toggle('active', tab === 'library');
+            elements.mainContentControls.classList.toggle('active', tab === 'controls');
+            elements.mainContentMultiplayer.classList.toggle('active', tab === 'multiplayer');
+        }
+        
+        function switchMode(mode) {
+            state.mode = mode;
+            stopListening();
+            
+            document.querySelectorAll('.input-tab').forEach(function(tab) {
+                tab.classList.toggle('active', tab.getAttribute('data-mode') === mode);
+            });
+            
+            elements.contentKeyboard.classList.toggle('active', mode === 'keyboard');
+            elements.contentGamepad.classList.toggle('active', mode === 'gamepad');
+            elements.contentMobile.classList.toggle('active', mode === 'mobile');
+            
+            render();
+        }
+        
+        // ===== Emulator Key Simulation (needed for touch controls) =====
+        // Maps N64 buttons to EmulatorJS expected keys (matches n64js/index.html)
+        var ejsKeyMap = {
+            a: { key: 'z', code: 'KeyZ', keyCode: 90 },
+            b: { key: 'x', code: 'KeyX', keyCode: 88 },
+            start: { key: 'Enter', code: 'Enter', keyCode: 13 },
+            z: { key: 'Shift', code: 'ShiftLeft', keyCode: 16 },
+            l: { key: 'q', code: 'KeyQ', keyCode: 81 },
+            r: { key: 'e', code: 'KeyE', keyCode: 69 },
+            cUp: { key: 'i', code: 'KeyI', keyCode: 73 },
+            cDown: { key: 'k', code: 'KeyK', keyCode: 75 },
+            cLeft: { key: 'j', code: 'KeyJ', keyCode: 74 },
+            cRight: { key: 'l', code: 'KeyL', keyCode: 76 },
+            stickUp: { key: 'w', code: 'KeyW', keyCode: 87 },
+            stickDown: { key: 's', code: 'KeyS', keyCode: 83 },
+            stickLeft: { key: 'a', code: 'KeyA', keyCode: 65 },
+            stickRight: { key: 'd', code: 'KeyD', keyCode: 68 },
+            dUp: { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+            dDown: { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+            dLeft: { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
+            dRight: { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 }
         };
-        reader.readAsArrayBuffer(file);
-      }
-      
-      dropZone.addEventListener('click', function() {
-        fileInput.click();
-      });
-      
-      dropZone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.add('dragover');
-      });
-      
-      dropZone.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.remove('dragover');
-      });
-      
-      dropZone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.remove('dragover');
         
-        var files = e.dataTransfer.files;
-        if (files.length > 0) {
-          handleFileSelect(files[0]);
+        function simulateEmulatorKey(n64Button, eventType) {
+            var keyData = ejsKeyMap[n64Button];
+            if (!keyData) return;
+            
+            var event = new KeyboardEvent(eventType, {
+                key: keyData.key,
+                code: keyData.code,
+                keyCode: keyData.keyCode,
+                which: keyData.keyCode,
+                bubbles: true,
+                cancelable: true
+            });
+            
+            var canvas = document.querySelector('#game canvas');
+            if (canvas) {
+                canvas.dispatchEvent(event);
+            } else {
+                document.dispatchEvent(event);
+            }
         }
-      });
-      
-      document.getElementById('load-btn').addEventListener('click', function() {
-        fileInput.click();
-      });
-      
-      fileInput.addEventListener('change', function(e) {
-        var file = e.target.files[0];
-        if (file) {
-          handleFileSelect(file);
+        
+        // ===== Emulator =====
+        var emulatorLoaded = false;
+        var pressedGameKeys = {};
+        
+        var stickState = { up: false, down: false, left: false, right: false };
+        var stickButtons = ['stickUp', 'stickDown', 'stickLeft', 'stickRight'];
+        
+        function buildReverseKeyMap() {
+            var reverseMap = {};
+            var buttons = ['a', 'b', 'start', 'z', 'l', 'r', 'cUp', 'cDown', 'cLeft', 'cRight', 'dUp', 'dDown', 'dLeft', 'dRight', 'stickUp', 'stickDown', 'stickLeft', 'stickRight'];
+            for (var i = 0; i < buttons.length; i++) {
+                var btn = buttons[i];
+                var userKey = state.keyboardMap[btn];
+                if (userKey) {
+                    reverseMap[userKey.toLowerCase()] = btn;
+                }
+            }
+            return reverseMap;
         }
-      });
-      
-      document.body.addEventListener('dragover', function(e) {
-        e.preventDefault();
-      });
-      
-      document.body.addEventListener('drop', function(e) {
-        e.preventDefault();
-        var files = e.dataTransfer.files;
-        if (files.length > 0) {
-          handleFileSelect(files[0]);
+        
+        function updateStickSimulation() {
+            // For analog stick, simulate W/A/S/D keys based on direction state
+            if (stickState.up) simulateEmulatorKey('stickUp', 'keydown');
+            else simulateEmulatorKey('stickUp', 'keyup');
+            
+            if (stickState.down) simulateEmulatorKey('stickDown', 'keydown');
+            else simulateEmulatorKey('stickDown', 'keyup');
+            
+            if (stickState.left) simulateEmulatorKey('stickLeft', 'keydown');
+            else simulateEmulatorKey('stickLeft', 'keyup');
+            
+            if (stickState.right) simulateEmulatorKey('stickRight', 'keydown');
+            else simulateEmulatorKey('stickRight', 'keyup');
         }
-      });
-      
-      var keyEventData = {
-        'x': { key: 'x', code: 'KeyX', keyCode: 88 },
-        'z': { key: 'z', code: 'KeyZ', keyCode: 90 },
-        'enter': { key: 'Enter', code: 'Enter', keyCode: 13 },
-        'shift': { key: 'Shift', code: 'ShiftLeft', keyCode: 16 },
-        'q': { key: 'q', code: 'KeyQ', keyCode: 81 },
-        'e': { key: 'e', code: 'KeyE', keyCode: 69 },
-        'i': { key: 'i', code: 'KeyI', keyCode: 73 },
-        'k': { key: 'k', code: 'KeyK', keyCode: 75 },
-        'j': { key: 'j', code: 'KeyJ', keyCode: 74 },
-        'l': { key: 'l', code: 'KeyL', keyCode: 76 },
-        'w': { key: 'w', code: 'KeyW', keyCode: 87 },
-        's': { key: 's', code: 'KeyS', keyCode: 83 },
-        'a': { key: 'a', code: 'KeyA', keyCode: 65 },
-        'd': { key: 'd', code: 'KeyD', keyCode: 68 },
-        'arrowup': { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
-        'arrowdown': { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
-        'arrowleft': { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
-        'arrowright': { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 }
-      };
-      
-      var buttonKeyMap = {
-        'a': 'z',
-        'b': 'x',
-        'start': 'enter',
-        'z': 'shift',
-        'l': 'q',
-        'r': 'e',
-        'cUp': 'i',
-        'cDown': 'k',
-        'cLeft': 'j',
-        'cRight': 'l',
-        'dUp': 'arrowup',
-        'dDown': 'arrowdown',
-        'dLeft': 'arrowleft',
-        'dRight': 'arrowright',
-        'stickUp': 'w',
-        'stickDown': 's',
-        'stickLeft': 'a',
-        'stickRight': 'd'
-      };
-      
-      var pressedButtons = {};
-      
-      function simulateKeyEvent(buttonName, type) {
-        var keyName = buttonKeyMap[buttonName];
-        if (!keyName) return;
         
-        var keyData = keyEventData[keyName];
-        if (!keyData) return;
+        function handleGameKeyDown(e) {
+            if (!state.gameRunning) return;
+            if (state.listeningKey) return; // In mapping mode
+            
+            var targetTag = e.target.tagName.toLowerCase();
+            if (targetTag === 'input' || targetTag === 'textarea') return;
+            
+            var reverseMap = buildReverseKeyMap();
+            var n64Button = reverseMap[e.code.toLowerCase()];
+            
+            if (n64Button && !pressedGameKeys[e.code]) {
+                e.preventDefault();
+                e.stopPropagation();
+                pressedGameKeys[e.code] = true;
+                
+                if (stickButtons.indexOf(n64Button) !== -1) {
+                    if (n64Button === 'stickUp') stickState.up = true;
+                    else if (n64Button === 'stickDown') stickState.down = true;
+                    else if (n64Button === 'stickLeft') stickState.left = true;
+                    else if (n64Button === 'stickRight') stickState.right = true;
+                    updateStickSimulation();
+                } else {
+                    simulateEmulatorKey(n64Button, 'keydown');
+                }
+            }
+        }
         
-        var isDown = type === 'keydown';
+        function handleGameKeyUp(e) {
+            if (!state.gameRunning) return;
+            
+            var targetTag = e.target.tagName.toLowerCase();
+            if (targetTag === 'input' || targetTag === 'textarea') return;
+            
+            var reverseMap = buildReverseKeyMap();
+            var n64Button = reverseMap[e.code.toLowerCase()];
+            
+            if (n64Button && pressedGameKeys[e.code]) {
+                e.preventDefault();
+                e.stopPropagation();
+                delete pressedGameKeys[e.code];
+                
+                if (stickButtons.indexOf(n64Button) !== -1) {
+                    if (n64Button === 'stickUp') stickState.up = false;
+                    else if (n64Button === 'stickDown') stickState.down = false;
+                    else if (n64Button === 'stickLeft') stickState.left = false;
+                    else if (n64Button === 'stickRight') stickState.right = false;
+                    updateStickSimulation();
+                } else {
+                    simulateEmulatorKey(n64Button, 'keyup');
+                }
+            }
+        }
         
-        if (isDown) {
-          if (pressedButtons[buttonName]) return;
-          pressedButtons[buttonName] = true;
+        function loadEmulator(romBlob, romName) {
+            if (emulatorLoaded) {
+                window.location.reload();
+                return;
+            }
+            
+            setStatus('Loading emulator...', 'loading');
+            
+            elements.uploadZone.style.display = 'none';
+            elements.emulatorContainer.style.display = 'block';
+            
+            var romUrl = URL.createObjectURL(romBlob);
+            
+            window.EJS_player = '#game';
+            window.EJS_core = 'n64';
+            window.EJS_gameUrl = romUrl;
+            window.EJS_gameName = romName || 'N64 Game';
+            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+            window.EJS_startOnLoaded = true;
+            window.EJS_color = '#E43F5A';
+            window.EJS_backgroundColor = '#0F0F23';
+            
+            // Disable EmulatorJS's built-in virtual gamepad - we use our own custom touch overlay
+            window.EJS_VirtualGamepadSettings = [];
+            window.EJS_Buttons = {
+                playPause: true,
+                restart: true,
+                mute: true,
+                settings: true,
+                fullscreen: true,
+                saveState: true,
+                loadState: true,
+                screenRecord: false,
+                gamepad: false,
+                cheat: false,
+                volume: true,
+                quickSave: false,
+                quickLoad: false,
+                screenshot: false,
+                cacheManager: false
+            };
+            
+            // Default control mappings for up to 4 players (matches n64js/index.html)
+            // Control IDs: 0=B, 1=A, 2=Start, 3-6=C-buttons, 7-10=Analog, 11-14=D-pad, 15=L, 16=R, 17=Z
+            var defaultControlMapping = {
+                0: { 'value': 'x', 'value2': 'FACE_1' },
+                1: { 'value': 'z', 'value2': 'FACE_2' },
+                2: { 'value': 'enter', 'value2': 'START' },
+                3: { 'value': 'i', 'value2': 'FACE_4' },
+                4: { 'value': 'k', 'value2': 'FACE_3' },
+                5: { 'value': 'j', 'value2': 'LEFT_STICK_BUTTON' },
+                6: { 'value': 'l', 'value2': 'RIGHT_STICK_BUTTON' },
+                7: { 'value': 'w' },
+                8: { 'value': 's' },
+                9: { 'value': 'a' },
+                10: { 'value': 'd' },
+                11: { 'value': 'arrowup', 'value2': 'DPAD_UP' },
+                12: { 'value': 'arrowdown', 'value2': 'DPAD_DOWN' },
+                13: { 'value': 'arrowleft', 'value2': 'DPAD_LEFT' },
+                14: { 'value': 'arrowright', 'value2': 'DPAD_RIGHT' },
+                15: { 'value': 'q', 'value2': 'LEFT_SHOULDER' },
+                16: { 'value': 'e', 'value2': 'RIGHT_SHOULDER' },
+                17: { 'value': 'shift', 'value2': 'LEFT_TRIGGER' },
+                24: { 'value2': 'LEFT_STICK_X:+1' },
+                25: { 'value2': 'LEFT_STICK_X:-1' },
+                26: { 'value2': 'LEFT_STICK_Y:+1' },
+                27: { 'value2': 'LEFT_STICK_Y:-1' }
+            };
+            
+            window.EJS_defaultControls = {
+                0: Object.assign({}, defaultControlMapping),
+                1: Object.assign({}, defaultControlMapping),
+                2: Object.assign({}, defaultControlMapping),
+                3: Object.assign({}, defaultControlMapping)
+            };
+            
+            window.EJS_onGameStart = function() {
+                setStatus('Playing: ' + romName, 'ready');
+                emulatorLoaded = true;
+                state.gameRunning = true;
+                elements.btnNewGame.style.display = 'flex';
+            };
+            
+            var script = document.createElement('script');
+            script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+            script.onerror = function() {
+                setStatus('Failed to load emulator', 'error');
+                elements.uploadZone.style.display = 'block';
+                elements.emulatorContainer.style.display = 'none';
+            };
+            document.body.appendChild(script);
+        }
+        
+        function handleFile(file) {
+            var validExt = ['.z64', '.n64', '.v64', '.rom', '.zip'];
+            var ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+            
+            if (validExt.indexOf(ext) === -1) {
+                setStatus('Invalid file type', 'error');
+                return;
+            }
+            
+            setStatus('Reading: ' + file.name, 'loading');
+            
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var blob = new Blob([e.target.result], { type: 'application/octet-stream' });
+                loadEmulator(blob, file.name);
+            };
+            reader.onerror = function() { setStatus('Failed to read file', 'error'); };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // ===== Event Bindings =====
+        function bindEvents() {
+            // Main tab switching
+            elements.mainTabLibrary.addEventListener('click', function() { switchMainTab('library'); });
+            elements.mainTabControls.addEventListener('click', function() { switchMainTab('controls'); });
+            
+            document.querySelectorAll('.input-tab').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    if (!tab.disabled) {
+                        switchMode(tab.getAttribute('data-mode'));
+                    }
+                });
+            });
+            
+            document.addEventListener('keydown', handleKeyDown);
+            
+            // Game keyboard input handlers (translate user mappings to EmulatorJS keys)
+            document.addEventListener('keydown', handleGameKeyDown, true);
+            document.addEventListener('keyup', handleGameKeyUp, true);
+            
+            document.getElementById('wizardKeyboard').addEventListener('click', function() { startWizard('keyboard'); });
+            document.getElementById('resetKeyboard').addEventListener('click', function() {
+                state.keyboardMap = Object.assign({}, defaultKeyboardMap);
+                render();
+                setStatus('Keyboard mappings reset', 'ready');
+            });
+            document.getElementById('saveKeyboard').addEventListener('click', function() {
+                saveMap(STORAGE_KEY_KEYBOARD, state.keyboardMap);
+                setStatus('Keyboard mappings saved!', 'ready');
+            });
+            
+            document.getElementById('wizardGamepad').addEventListener('click', function() { startWizard('gamepad'); });
+            document.getElementById('resetGamepad').addEventListener('click', function() {
+                var idx = state.selectedGamepadIndex;
+                state.gamepadMaps[idx] = Object.assign({}, defaultGamepadMap);
+                render();
+                var playerLabel = state.connectedGamepads.length > 1 ? 'Player ' + (idx + 1) + ' ' : '';
+                setStatus(playerLabel + 'controller mappings reset', 'ready');
+            });
+            document.getElementById('saveGamepad').addEventListener('click', function() {
+                var idx = state.selectedGamepadIndex;
+                saveMap(STORAGE_KEY_GAMEPAD_PREFIX + idx, state.gamepadMaps[idx]);
+                var playerLabel = state.connectedGamepads.length > 1 ? 'Player ' + (idx + 1) + ' ' : '';
+                setStatus(playerLabel + 'controller mappings saved!', 'ready');
+            });
+            
+            // Debug toggle
+            elements.toggleDebug.addEventListener('click', function() {
+                debugMode = !debugMode;
+                elements.toggleDebug.textContent = debugMode ? 'Hide Debug' : 'Show Debug Info';
+                elements.debugHint.style.display = debugMode ? 'inline' : 'none';
+                
+                if (debugMode) {
+                    if (state.listeningKey) {
+                        elements.debugContent.style.display = 'block';
+                        elements.debugInstructions.style.display = 'none';
+                    } else {
+                        elements.debugContent.style.display = 'none';
+                        elements.debugInstructions.style.display = 'block';
+                    }
+                } else {
+                    elements.debugContent.style.display = 'none';
+                    elements.debugInstructions.style.display = 'none';
+                }
+            });
+            
+            document.getElementById('wizardSkip').addEventListener('click', skipWizardStep);
+            document.getElementById('wizardCancel').addEventListener('click', cancelWizard);
+            
+            // New Game button - reload the page to start fresh
+            elements.btnNewGame.addEventListener('click', function() {
+                window.location.reload();
+            });
+            
+            elements.uploadZone.addEventListener('click', function() { elements.fileInput.click(); });
+            elements.fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) handleFile(e.target.files[0]);
+            });
+            elements.uploadZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                elements.uploadZone.classList.add('dragover');
+            });
+            elements.uploadZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                elements.uploadZone.classList.remove('dragover');
+            });
+            elements.uploadZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                elements.uploadZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+            });
+            
+            window.addEventListener('gamepadconnected', function() { setTimeout(detectGamepads, 100); });
+            window.addEventListener('gamepaddisconnected', function() { setTimeout(detectGamepads, 100); });
+            setInterval(detectGamepads, 500);
+            
+            // Multiplayer event handlers
+            elements.mainTabMultiplayer.addEventListener('click', function() { switchMainTab('multiplayer'); });
+            elements.mpTabCreate.addEventListener('click', function() { switchMpTab('create'); });
+            elements.mpTabJoin.addEventListener('click', function() { switchMpTab('join'); });
+            elements.mpBtnCreate.addEventListener('click', mpCreateRoom);
+            elements.mpBtnJoin.addEventListener('click', mpJoinRoom);
+            elements.mpBtnLeave.addEventListener('click', mpLeaveRoom);
+            elements.mpRoomCode.addEventListener('click', function() {
+                if (state.mp.room) {
+                    navigator.clipboard.writeText(state.mp.room.code);
+                    setStatus('Room code copied!', 'ready');
+                }
+            });
+        }
+        
+        // ===== Multiplayer Functions =====
+        function getWsUrl() {
+            var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            return protocol + '//' + window.location.host + '/ws/multiplayer';
+        }
+        
+        function mpConnect() {
+            if (state.mp.ws) return;
+            
+            try {
+                state.mp.ws = new WebSocket(getWsUrl());
+                
+                state.mp.ws.onopen = function() {
+                    state.mp.connected = true;
+                    mpUpdateStatus('connected', 'Connected to server');
+                };
+                
+                state.mp.ws.onclose = function() {
+                    state.mp.connected = false;
+                    state.mp.ws = null;
+                    mpUpdateStatus('', 'Disconnected');
+                    mpShowJoinCreate();
+                };
+                
+                state.mp.ws.onerror = function() {
+                    mpUpdateStatus('error', 'Connection error');
+                };
+                
+                state.mp.ws.onmessage = function(e) {
+                    try {
+                        var msg = JSON.parse(e.data);
+                        mpHandleMessage(msg);
+                    } catch (err) {
+                        console.error('Failed to parse message:', err);
+                    }
+                };
+            } catch (err) {
+                console.error('WebSocket connection failed:', err);
+                mpUpdateStatus('error', 'Failed to connect');
+            }
+        }
+        
+        function mpSend(msg) {
+            if (state.mp.ws && state.mp.ws.readyState === WebSocket.OPEN) {
+                state.mp.ws.send(JSON.stringify(msg));
+            }
+        }
+        
+        function mpHandleMessage(msg) {
+            switch (msg.type) {
+                case 'room-created':
+                case 'room-joined':
+                    state.mp.room = msg.room;
+                    state.mp.localPlayer = msg.player;
+                    state.mp.isHost = msg.player.role === 'host';
+                    mpShowLobby();
+                    mpRenderPlayers();
+                    break;
+                    
+                case 'player-joined':
+                case 'player-left':
+                case 'room-updated':
+                    if (msg.room) {
+                        state.mp.room = msg.room;
+                        var updated = msg.room.players.find(function(p) { return p.id === state.mp.localPlayer.id; });
+                        if (updated) {
+                            state.mp.localPlayer = updated;
+                            state.mp.isHost = updated.role === 'host';
+                        }
+                        mpRenderPlayers();
+                    }
+                    break;
+                    
+                case 'room-closed':
+                    state.mp.room = null;
+                    state.mp.localPlayer = null;
+                    state.mp.isHost = false;
+                    mpShowJoinCreate();
+                    setStatus('Room was closed', 'ready');
+                    break;
+                    
+                case 'error':
+                    setStatus(msg.message || 'An error occurred', 'error');
+                    break;
+            }
+        }
+        
+        function mpUpdateStatus(statusClass, text) {
+            elements.mpStatusDot.className = 'mp-status-dot';
+            if (statusClass === 'connected') elements.mpStatusDot.classList.add('connected');
+            else if (statusClass === 'error') elements.mpStatusDot.classList.add('error');
+            elements.mpStatusText.textContent = text;
+        }
+        
+        function switchMpTab(tab) {
+            elements.mpTabCreate.classList.toggle('active', tab === 'create');
+            elements.mpTabJoin.classList.toggle('active', tab === 'join');
+            elements.mpPanelCreate.classList.toggle('active', tab === 'create');
+            elements.mpPanelJoin.classList.toggle('active', tab === 'join');
+        }
+        
+        function mpShowJoinCreate() {
+            elements.mpJoinCreate.style.display = 'block';
+            elements.mpLobby.style.display = 'none';
+        }
+        
+        function mpShowLobby() {
+            elements.mpJoinCreate.style.display = 'none';
+            elements.mpLobby.style.display = 'block';
+            if (state.mp.room) {
+                elements.mpRoomCode.textContent = state.mp.room.code;
+            }
+        }
+        
+        function mpRenderPlayers() {
+            if (!state.mp.room) return;
+            
+            var html = '';
+            state.mp.room.players.forEach(function(player) {
+                var isLocal = player.id === state.mp.localPlayer.id;
+                html += '<div class="mp-player">';
+                html += '<div class="mp-player-port">P' + player.port + '</div>';
+                html += '<div class="mp-player-name">' + player.name + (isLocal ? ' (You)' : '') + '</div>';
+                html += '<span class="mp-player-role ' + player.role + '">' + (player.role === 'host' ? 'Host' : 'Guest') + '</span>';
+                html += '</div>';
+            });
+            elements.mpPlayerList.innerHTML = html;
+        }
+        
+        function mpCreateRoom() {
+            var name = elements.mpCreateName.value.trim();
+            if (!name) {
+                setStatus('Please enter your name', 'error');
+                return;
+            }
+            mpConnect();
+            setTimeout(function() {
+                mpSend({ type: 'create-room', playerName: name });
+            }, 500);
+        }
+        
+        function mpJoinRoom() {
+            var name = elements.mpJoinName.value.trim();
+            var code = elements.mpJoinCode.value.trim().toUpperCase();
+            if (!name) {
+                setStatus('Please enter your name', 'error');
+                return;
+            }
+            if (!code || code.length !== 6) {
+                setStatus('Please enter a valid 6-character room code', 'error');
+                return;
+            }
+            mpConnect();
+            setTimeout(function() {
+                mpSend({ type: 'join-room', roomCode: code, playerName: name });
+            }, 500);
+        }
+        
+        function mpLeaveRoom() {
+            mpSend({ type: 'leave-room' });
+            state.mp.room = null;
+            state.mp.localPlayer = null;
+            state.mp.isHost = false;
+            mpShowJoinCreate();
+        }
+        
+        // ===== Init =====
+        function init() {
+            initElements();
+            
+            state.isMobile = isMobileDevice();
+            if (state.isMobile) {
+                elements.tabMobile.style.display = 'flex';
+                switchMode('mobile');
+            }
+            
+            render();
+            bindEvents();
+            detectGamepads();
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
         } else {
-          if (!pressedButtons[buttonName]) return;
-          delete pressedButtons[buttonName];
+            init();
         }
-        
-        var event = new KeyboardEvent(type, {
-          key: keyData.key,
-          code: keyData.code,
-          keyCode: keyData.keyCode,
-          which: keyData.keyCode,
-          bubbles: true,
-          cancelable: true
-        });
-        
-        var canvas = document.querySelector('canvas');
-        if (canvas) {
-          canvas.dispatchEvent(event);
-        } else {
-          document.dispatchEvent(event);
-        }
-      }
-      
-      var joystickState = { up: false, down: false, left: false, right: false };
-      
-      function handleJoystickInput(x, y) {
-        var threshold = 0.25;
-        
-        var newUp = y < -threshold;
-        var newDown = y > threshold;
-        var newLeft = x < -threshold;
-        var newRight = x > threshold;
-        
-        if (newRight !== joystickState.right) {
-          simulateKeyEvent('stickRight', newRight ? 'keydown' : 'keyup');
-          joystickState.right = newRight;
-        }
-        
-        if (newLeft !== joystickState.left) {
-          simulateKeyEvent('stickLeft', newLeft ? 'keydown' : 'keyup');
-          joystickState.left = newLeft;
-        }
-        
-        if (newDown !== joystickState.down) {
-          simulateKeyEvent('stickDown', newDown ? 'keydown' : 'keyup');
-          joystickState.down = newDown;
-        }
-        
-        if (newUp !== joystickState.up) {
-          simulateKeyEvent('stickUp', newUp ? 'keydown' : 'keyup');
-          joystickState.up = newUp;
-        }
-      }
-      
-      window.addEventListener('message', function(e) {
-        if (e.origin !== origin && e.origin !== window.location.origin) {
-          return;
-        }
-        var data = e.data;
-        if (data && data.type === 'loadRom' && data.romData) {
-          loadRomData(data.romData, data.romName);
-        } else if (data && data.type === 'ping') {
-          sendToParent({ type: 'pong', ready: emulatorStarted });
-        } else if (data && data.type === 'focus') {
-          var canvas = document.querySelector('canvas');
-          if (canvas) canvas.focus();
-        } else if (data && data.type === 'touchInput') {
-          var action = data.action;
-          var button = data.button;
-          if (action === 'press') {
-            simulateKeyEvent(button, 'keydown');
-          } else if (action === 'release') {
-            simulateKeyEvent(button, 'keyup');
-          }
-        } else if (data && data.type === 'joystickInput') {
-          handleJoystickInput(data.x, data.y);
-        }
-      });
-      
-      sendToParent({ type: 'iframeLoaded' });
     })();
-  </script>
+    
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('./sw.js')
+                .then(function(registration) {
+                    console.log('SW registered:', registration.scope);
+                })
+                .catch(function(error) {
+                    console.log('SW registration failed:', error);
+                });
+        });
+    }
+    </script>
 </body>
 </html>
