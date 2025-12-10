@@ -201,6 +201,16 @@
         
         #game { width: 100%; height: 500px; }
         
+        /* Hide EmulatorJS's built-in virtual gamepad - we use our own custom touch overlay */
+        .ejs-gamepad,
+        .ejs-virtual-gamepad,
+        [class*="ejs_virtualGamepad"],
+        [class*="ejs_gamepad"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        
         /* Input Mode Tabs */
         .input-tabs {
             display: flex;
@@ -1654,6 +1664,26 @@
             window.EJS_startOnLoaded = true;
             window.EJS_color = '#E43F5A';
             window.EJS_backgroundColor = '#0F0F23';
+            
+            // Disable EmulatorJS's built-in virtual gamepad - we use our own custom touch overlay
+            window.EJS_VirtualGamepadSettings = [];
+            window.EJS_Buttons = {
+                playPause: true,
+                restart: true,
+                mute: true,
+                settings: true,
+                fullscreen: true,
+                saveState: true,
+                loadState: true,
+                screenRecord: false,
+                gamepad: false,
+                cheat: false,
+                volume: true,
+                quickSave: false,
+                quickLoad: false,
+                screenshot: false,
+                cacheManager: false
+            };
             
             // Default control mappings for up to 4 players (matches n64js/index.html)
             // Control IDs: 0=B, 1=A, 2=Start, 3-6=C-buttons, 7-10=Analog, 11-14=D-pad, 15=L, 16=R, 17=Z
