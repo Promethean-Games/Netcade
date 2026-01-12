@@ -1681,8 +1681,15 @@
             
             if (mode === 'keyboard') {
                 state.keyboardMap[key] = code;
+                // Save immediately to localStorage
+                saveMap(STORAGE_KEY_KEYBOARD, state.keyboardMap);
+                console.log('[N64Vault] Saved keyboard mapping:', key, '=', code);
             } else {
-                state.gamepadMaps[state.selectedGamepadIndex][key] = code;
+                var gpIdx = state.selectedGamepadIndex;
+                state.gamepadMaps[gpIdx][key] = code;
+                // Save immediately to localStorage
+                saveMap(STORAGE_KEY_GAMEPAD_PREFIX + gpIdx, state.gamepadMaps[gpIdx]);
+                console.log('[N64Vault] Saved gamepad', gpIdx, 'mapping:', key, '=', code);
             }
             
             if (state.wizard.active) {
@@ -2267,14 +2274,37 @@
             };
             
             // Build control mappings from saved user preferences
-            // EmulatorJS Control IDs: 0=B, 1=A, 2=Start, 3=C-Up, 4=C-Down, 5=C-Left, 6=C-Right, 
-            // 7-10=Analog (up/down/left/right), 11-14=D-pad, 15=L, 16=R, 17=Z
+            // EmulatorJS N64 Control IDs (from their source):
+            // 0=A, 1=B, 2=SELECT(unused), 3=START, 4=D-Up, 5=D-Down, 6=D-Left, 7=D-Right
+            // 8=L, 9=R, 10=Z, 11=C-Up, 12=C-Down, 13=C-Left, 14=C-Right
+            // 16-19=Analog stick directions (Up/Down/Left/Right)
+            // 24-27=Analog axes
             var n64ToEjsMap = {
-                'b': 0, 'a': 1, 'start': 2,
-                'cUp': 3, 'cDown': 4, 'cLeft': 5, 'cRight': 6,
-                'stickUp': 7, 'stickDown': 8, 'stickLeft': 9, 'stickRight': 10,
-                'dUp': 11, 'dDown': 12, 'dLeft': 13, 'dRight': 14,
-                'l': 15, 'r': 16, 'z': 17
+                'a': 0, 'b': 1, 'start': 3,
+                'dUp': 4, 'dDown': 5, 'dLeft': 6, 'dRight': 7,
+                'l': 8, 'r': 9, 'z': 10,
+                'cUp': 11, 'cDown': 12, 'cLeft': 13, 'cRight': 14,
+                'stickUp': 16, 'stickDown': 17, 'stickLeft': 18, 'stickRight': 19
+            };
+            
+            // Default keyboard mappings as fallback
+            var defaultKbFallback = {
+                a: 'x', b: 'z', start: 'enter', z: 'shift',
+                l: 'q', r: 'e',
+                cUp: 'i', cDown: 'k', cLeft: 'j', cRight: 'l',
+                dUp: 'arrowup', dDown: 'arrowdown', dLeft: 'arrowleft', dRight: 'arrowright',
+                stickUp: 'w', stickDown: 's', stickLeft: 'a', stickRight: 'd'
+            };
+            
+            // Default gamepad mappings as fallback
+            var defaultGpFallback = {
+                a: 'FACE_1', b: 'FACE_2', start: 'START', z: 'LEFT_TRIGGER',
+                l: 'LEFT_SHOULDER', r: 'RIGHT_SHOULDER',
+                cUp: 'RIGHT_STICK_Y:-1', cDown: 'RIGHT_STICK_Y:+1', 
+                cLeft: 'RIGHT_STICK_X:-1', cRight: 'RIGHT_STICK_X:+1',
+                dUp: 'DPAD_UP', dDown: 'DPAD_DOWN', dLeft: 'DPAD_LEFT', dRight: 'DPAD_RIGHT',
+                stickUp: 'LEFT_STICK_Y:-1', stickDown: 'LEFT_STICK_Y:+1', 
+                stickLeft: 'LEFT_STICK_X:-1', stickRight: 'LEFT_STICK_X:+1'
             };
             
             function keyCodeToEjsKey(keyCode) {
@@ -2303,6 +2333,7 @@
             
             function gamepadBindingToEjs(binding) {
                 if (!binding) return null;
+                if (typeof binding !== 'string') return null;
                 if (binding.startsWith('Button:')) {
                     var btnNum = parseInt(binding.split(':')[1]);
                     var btnMap = {
@@ -2313,7 +2344,7 @@
                         10: 'LEFT_STICK_BUTTON', 11: 'RIGHT_STICK_BUTTON',
                         12: 'DPAD_UP', 13: 'DPAD_DOWN', 14: 'DPAD_LEFT', 15: 'DPAD_RIGHT'
                     };
-                    return btnMap[btnNum] || null;
+                    return btnMap[btnNum] || 'FACE_1';
                 }
                 if (binding.startsWith('Axis:')) {
                     var parts = binding.split(':');
@@ -2329,29 +2360,31 @@
             
             function buildPlayerControls(playerIndex) {
                 var controls = {};
-                var kbMap = state.keyboardMap;
-                var gpMap = state.gamepadMaps[playerIndex] || state.gamepadMaps[0];
+                var kbMap = state.keyboardMap || {};
+                var gpMap = state.gamepadMaps[playerIndex] || state.gamepadMaps[0] || {};
+                
+                console.log('[N64Vault] Building controls for player', playerIndex, 'kbMap:', kbMap, 'gpMap:', gpMap);
                 
                 for (var n64Btn in n64ToEjsMap) {
                     var ejsId = n64ToEjsMap[n64Btn];
                     var ctrl = {};
                     
+                    // Get keyboard mapping with fallback
                     var kbKey = keyCodeToEjsKey(kbMap[n64Btn]);
-                    if (kbKey) ctrl.value = kbKey;
+                    ctrl.value = kbKey || defaultKbFallback[n64Btn] || '';
                     
+                    // Get gamepad mapping with fallback
                     var gpBtn = gamepadBindingToEjs(gpMap[n64Btn]);
-                    if (gpBtn) ctrl.value2 = gpBtn;
+                    ctrl.value2 = gpBtn || defaultGpFallback[n64Btn] || '';
                     
-                    if (ctrl.value || ctrl.value2) {
-                        controls[ejsId] = ctrl;
-                    }
+                    controls[ejsId] = ctrl;
                 }
                 
-                // Add analog stick axes for gamepad (these are always the same)
+                // Analog stick axes (always same for all players)
                 controls[24] = { 'value2': 'LEFT_STICK_X:+1' };
                 controls[25] = { 'value2': 'LEFT_STICK_X:-1' };
-                controls[26] = { 'value2': 'LEFT_STICK_Y:+1' };
-                controls[27] = { 'value2': 'LEFT_STICK_Y:-1' };
+                controls[26] = { 'value2': 'LEFT_STICK_Y:-1' };
+                controls[27] = { 'value2': 'LEFT_STICK_Y:+1' };
                 
                 return controls;
             }
@@ -2363,7 +2396,7 @@
                 3: buildPlayerControls(3)
             };
             
-            console.log('[N64Vault] Applied control mappings:', window.EJS_defaultControls);
+            console.log('[N64Vault] Final EJS_defaultControls:', JSON.stringify(window.EJS_defaultControls, null, 2));
             
             window.EJS_onGameStart = function() {
                 setStatus('Playing: ' + romName, 'ready');
