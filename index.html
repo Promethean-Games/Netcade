@@ -13,7 +13,7 @@
     <script>
         window.N64_VAULT_CONFIG = {
             // ========== VERSION (for cache busting) ==========
-            version: '2.0.7-debug-rtc',
+            version: '2.0.8-fix-upload-rtc',
             
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
@@ -2697,8 +2697,18 @@
             
             var reader = new FileReader();
             reader.onload = function(e) {
-                var blob = new Blob([e.target.result], { type: 'application/octet-stream' });
-                loadEmulator(blob, file.name);
+                // Create a game object for this uploaded ROM and route through playGame()
+                // This ensures multiplayer RTC streaming is triggered
+                var uploadedGame = {
+                    id: 'uploaded-' + Date.now(),
+                    title: file.name.replace(/\.[^.]+$/, ''),
+                    filename: file.name,
+                    romData: e.target.result, // ArrayBuffer
+                    isUploaded: true
+                };
+                
+                console.log('[N64Vault] Uploaded ROM, routing through playGame:', file.name);
+                playGame(uploadedGame);
             };
             reader.onerror = function() { setStatus('Failed to read file', 'error'); };
             reader.readAsArrayBuffer(file);
