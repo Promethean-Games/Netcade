@@ -13,7 +13,7 @@
     <script>
         window.N64_VAULT_CONFIG = {
             // ========== VERSION (for cache busting) ==========
-            version: '2.0.1-mp-streaming',
+            version: '2.0.2-debug-clicks',
             
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
@@ -1655,12 +1655,18 @@
             elements.gameGrid.innerHTML = html;
             
             // Add click handlers
-            document.querySelectorAll('.game-card').forEach(function(card) {
-                card.addEventListener('click', function() {
+            var cards = document.querySelectorAll('.game-card');
+            console.log('[N64Vault] Adding click handlers to', cards.length, 'game cards');
+            cards.forEach(function(card) {
+                card.addEventListener('click', function(e) {
+                    console.log('[N64Vault] Game card clicked!', card.getAttribute('data-game-id'));
                     var gameId = card.getAttribute('data-game-id');
                     var game = games.find(function(g) { return g.id === gameId; });
                     if (game) {
+                        console.log('[N64Vault] Found game, calling playGame:', game.title);
                         playGame(game);
+                    } else {
+                        console.error('[N64Vault] Game not found for id:', gameId);
                     }
                 });
             });
