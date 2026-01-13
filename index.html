@@ -12,6 +12,9 @@
          ============================================ -->
     <script>
         window.N64_VAULT_CONFIG = {
+            // ========== VERSION (for cache busting) ==========
+            version: '2.0.1-mp-streaming',
+            
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
             // Leave empty or null for static hosting (no multiplayer)
@@ -35,6 +38,8 @@
                 mobileControls: true    // Touch controls on mobile
             }
         };
+        // Log version on load to verify cache is cleared
+        console.log('[N64Vault] Version:', window.N64_VAULT_CONFIG.version);
     </script>
     
     <meta name="mobile-web-app-capable" content="yes">
