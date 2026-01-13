@@ -2917,7 +2917,7 @@
             setStatus('Loading game: ' + gameName, 'loading');
             
             // Switch to library tab and show emulator container
-            switchTab('library');
+            switchMainTab('library');
             elements.uploadZone.style.display = 'none';
             elements.gameGrid.style.display = 'none';
             elements.emulatorContainer.style.display = 'block';
@@ -3333,7 +3333,10 @@
         function rtcShowGuestStream(gameName) {
             console.log('[RTC] Showing guest stream view for:', gameName);
             
-            switchTab('library');
+            // Switch to library tab (hides multiplayer section)
+            switchMainTab('library');
+            
+            // Hide library content, show guest stream container
             elements.uploadZone.style.display = 'none';
             elements.gameGrid.style.display = 'none';
             elements.emulatorContainer.style.display = 'none';
@@ -3343,6 +3346,9 @@
             elements.streamOverlayText.textContent = 'Connecting to host...';
             elements.streamStatusDot.classList.remove('connected');
             elements.streamStatusText.textContent = 'Connecting...';
+            
+            // Enable input forwarding
+            state.mp.inputsEnabled = true;
             
             setStatus('Watching: ' + gameName, 'ready');
         }
