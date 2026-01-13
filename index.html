@@ -1913,10 +1913,12 @@
         
         // ===== Gamepad Handling =====
         function startGamepadPoll() {
+            console.log('[Gamepad] startGamepadPoll called, existing poll:', !!gamepadPollId);
             if (gamepadPollId) return;
             stabilizationFrames = 0;
             previousButtons = [];
             previousAxes = [];
+            console.log('[Gamepad] Starting gamepad polling...');
             pollGamepad();
         }
         
@@ -1929,6 +1931,7 @@
         
         function pollGamepad() {
             if (!state.listeningKey || (state.listeningMode !== 'gamepad' && !(state.wizard.active && state.wizard.mode === 'gamepad'))) {
+                console.log('[Gamepad] pollGamepad stopped: not in gamepad listening mode');
                 gamepadPollId = null;
                 return;
             }
@@ -1955,6 +1958,7 @@
             }
             
             if (!gp) {
+                console.log('[Gamepad] No gamepad found, continuing poll...');
                 gamepadPollId = requestAnimationFrame(pollGamepad);
                 return;
             }
@@ -2088,11 +2092,16 @@
             for (var i = 0; i < gamepads.length && connected.length < MAX_CONTROLLERS; i++) {
                 if (gamepads[i] && gamepads[i].connected) {
                     connected.push({ index: gamepads[i].index, id: gamepads[i].id, gamepad: gamepads[i] });
+                    console.log('[Gamepad] Detected controller:', gamepads[i].id, 'at index', gamepads[i].index);
                 }
             }
             
             var prevCount = state.connectedGamepads.length;
             var newCount = connected.length;
+            
+            if (newCount !== prevCount) {
+                console.log('[Gamepad] Connected count changed:', prevCount, '->', newCount);
+            }
             
             state.connectedGamepads = connected;
             
