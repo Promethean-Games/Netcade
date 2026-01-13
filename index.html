@@ -1674,6 +1674,13 @@
             selectedGame = game;
             setStatus('Loading ' + game.title + '...', 'loading');
             
+            console.log('[N64Vault] playGame called, mp state:', {
+                isHost: state.mp.isHost,
+                hasRoom: !!state.mp.room,
+                roomCode: state.mp.room ? state.mp.room.code : null,
+                connected: state.mp.connected
+            });
+            
             // If we're the host in a multiplayer room, notify other players and start streaming
             if (state.mp.isHost && state.mp.room) {
                 console.log('[MP] Host starting game, notifying players:', game.title);
@@ -2883,10 +2890,16 @@
                     break;
                 
                 case 'game-started':
-                    console.log('[MP] Game started by host:', msg.gameName || msg.gameId);
+                    console.log('[MP] Game started by host:', msg.gameName || msg.gameId, 'isHost:', state.mp.isHost);
                     state.mp.room = msg.room;
+                    state.mp.currentGame = {
+                        id: msg.gameId,
+                        name: msg.gameName,
+                        romUrl: msg.romUrl
+                    };
                     // Only guests should show the stream viewer - host already has the emulator
                     if (!state.mp.isHost) {
+                        console.log('[MP] Guest transitioning to stream view');
                         rtcShowGuestStream(msg.gameName || 'Multiplayer Game');
                     }
                     break;
