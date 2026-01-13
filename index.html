@@ -13,7 +13,7 @@
     <script>
         window.N64_VAULT_CONFIG = {
             // ========== VERSION (for cache busting) ==========
-            version: '2.0.9-debug-guest-video',
+            version: '2.0.10-debug-ice',
             
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
@@ -3297,6 +3297,7 @@
             // ICE candidate handling
             pc.onicecandidate = function(e) {
                 if (e.candidate) {
+                    console.log('[RTC] Host sending ICE candidate to guest:', e.candidate.candidate.split(' ')[7]);
                     mpSend({
                         type: 'rtc-ice',
                         targetId: guestId,
@@ -3306,7 +3307,11 @@
             };
             
             pc.onconnectionstatechange = function() {
-                console.log('[RTC] Connection state with', guestId, ':', pc.connectionState);
+                console.log('[RTC] Connection state with guest', guestId, ':', pc.connectionState);
+            };
+            
+            pc.oniceconnectionstatechange = function() {
+                console.log('[RTC] ICE connection state with guest:', pc.iceConnectionState);
             };
             
             // Create offer
@@ -3390,6 +3395,7 @@
             // ICE candidate handling
             pc.onicecandidate = function(e) {
                 if (e.candidate) {
+                    console.log('[RTC] Guest sending ICE candidate to host:', e.candidate.candidate.split(' ')[7]);
                     mpSend({
                         type: 'rtc-ice',
                         targetId: hostId,
@@ -3401,9 +3407,21 @@
             pc.onconnectionstatechange = function() {
                 console.log('[RTC] Connection state with host:', pc.connectionState);
                 if (pc.connectionState === 'connected') {
+                    console.log('[RTC] === CONNECTION ESTABLISHED ===');
                     elements.streamStatusDot.classList.add('connected');
                     elements.streamStatusText.textContent = 'Connected';
+                    
+                    // Debug video element state when connected
+                    console.log('[RTC] Video element on connection:', {
+                        srcObject: elements.guestVideo.srcObject ? 'set' : 'null',
+                        readyState: elements.guestVideo.readyState,
+                        paused: elements.guestVideo.paused,
+                        videoWidth: elements.guestVideo.videoWidth,
+                        videoHeight: elements.guestVideo.videoHeight,
+                        currentTime: elements.guestVideo.currentTime
+                    });
                 } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+                    console.log('[RTC] Connection lost or failed:', pc.connectionState);
                     elements.streamStatusDot.classList.remove('connected');
                     elements.streamStatusText.textContent = 'Disconnected';
                 }
@@ -3447,11 +3465,16 @@
         
         // Handle ICE candidate from peer
         function rtcHandleIce(peerId, candidate) {
+            console.log('[RTC] Received ICE candidate from:', peerId, 'type:', candidate.candidate ? candidate.candidate.split(' ')[7] : 'unknown');
             var peer = state.mp.peers[peerId];
             if (peer && peer.pc) {
-                peer.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(function(e) {
+                peer.pc.addIceCandidate(new RTCIceCandidate(candidate)).then(function() {
+                    console.log('[RTC] ICE candidate added successfully');
+                }).catch(function(e) {
                     console.error('[RTC] Failed to add ICE candidate:', e);
                 });
+            } else {
+                console.warn('[RTC] No peer connection found for:', peerId);
             }
         }
         
