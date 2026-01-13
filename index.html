@@ -13,7 +13,7 @@
     <script>
         window.N64_VAULT_CONFIG = {
             // ========== VERSION (for cache busting) ==========
-            version: '2.0.2-debug-clicks',
+            version: '2.0.3-debug-showlib',
             
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
@@ -1766,6 +1766,7 @@
         }
         
         function showLibrary() {
+            console.log('[N64Vault] showLibrary() called - stack trace:', new Error().stack);
             elements.uploadZone.style.display = 'block';
             elements.gameGrid.style.display = 'grid';
             elements.emulatorContainer.style.display = 'none';
@@ -2932,7 +2933,7 @@
                     break;
                 
                 case 'game-started':
-                    console.log('[MP] Game started by host:', msg.gameName || msg.gameId, 'isHost:', state.mp.isHost);
+                    console.log('[MP] Game started message received. isHost:', state.mp.isHost, 'localPlayer:', state.mp.localPlayer);
                     state.mp.room = msg.room;
                     state.mp.currentGame = {
                         id: msg.gameId,
@@ -2943,6 +2944,8 @@
                     if (!state.mp.isHost) {
                         console.log('[MP] Guest transitioning to stream view');
                         rtcShowGuestStream(msg.gameName || 'Multiplayer Game');
+                    } else {
+                        console.log('[MP] Host received game-started, keeping emulator visible');
                     }
                     break;
                 
