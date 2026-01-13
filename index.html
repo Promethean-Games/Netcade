@@ -1841,13 +1841,18 @@
         
         // ===== Input Handling =====
         function startListening(key, mode) {
-            if (state.wizard.active) return;
+            console.log('[Controls] startListening called:', key, mode);
+            if (state.wizard.active) {
+                console.log('[Controls] Wizard active, ignoring');
+                return;
+            }
             state.listeningKey = key;
             state.listeningMode = mode;
             stabilizationFrames = 0;
             previousButtons = [];
             previousAxes = [];
             render();
+            console.log('[Controls] Now listening for:', key, 'mode:', mode);
             
             if (mode === 'gamepad') {
                 startGamepadPoll();
@@ -1881,8 +1886,15 @@
         }
         
         function handleKeyDown(e) {
-            if (state.listeningMode !== 'keyboard' && !(state.wizard.active && state.wizard.mode === 'keyboard')) return;
-            if (!state.listeningKey) return;
+            console.log('[Controls] handleKeyDown:', e.code, 'listeningMode:', state.listeningMode, 'listeningKey:', state.listeningKey);
+            if (state.listeningMode !== 'keyboard' && !(state.wizard.active && state.wizard.mode === 'keyboard')) {
+                console.log('[Controls] Not in keyboard listening mode, ignoring');
+                return;
+            }
+            if (!state.listeningKey) {
+                console.log('[Controls] No listening key set, ignoring');
+                return;
+            }
             
             e.preventDefault();
             
@@ -1895,6 +1907,7 @@
                 return;
             }
             
+            console.log('[Controls] Applying input:', e.code, 'to key:', state.listeningKey);
             applyInput(e.code);
         }
         
@@ -2481,9 +2494,9 @@
                 'stickUp': 16, 'stickDown': 17, 'stickLeft': 18, 'stickRight': 19
             };
             
-            // Default keyboard mappings as fallback
+            // Default keyboard mappings as fallback (A=Z, B=X per documentation)
             var defaultKbFallback = {
-                a: 'x', b: 'z', start: 'enter', z: 'shift',
+                a: 'z', b: 'x', start: 'enter', z: 'shift',
                 l: 'q', r: 'e',
                 cUp: 'i', cDown: 'k', cLeft: 'j', cRight: 'l',
                 dUp: 'arrowup', dDown: 'arrowdown', dLeft: 'arrowleft', dRight: 'arrowright',
