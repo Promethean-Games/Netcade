@@ -13,7 +13,7 @@
     <script>
         window.N64_VAULT_CONFIG = {
             // ========== VERSION (for cache busting) ==========
-            version: '2.0.8-fix-upload-rtc',
+            version: '2.0.9-debug-guest-video',
             
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
@@ -3333,13 +3333,46 @@
             
             // Handle incoming video track
             pc.ontrack = function(e) {
-                console.log('[RTC] Received track:', e.track.kind);
+                console.log('[RTC] Received track:', e.track.kind, 'readyState:', e.track.readyState, 'muted:', e.track.muted);
+                console.log('[RTC] Track settings:', JSON.stringify(e.track.getSettings()));
+                console.log('[RTC] Streams count:', e.streams ? e.streams.length : 0);
+                
                 if (e.streams && e.streams[0]) {
-                    elements.guestVideo.srcObject = e.streams[0];
+                    var stream = e.streams[0];
+                    console.log('[RTC] Stream ID:', stream.id, 'active:', stream.active, 'tracks:', stream.getTracks().length);
+                    
+                    elements.guestVideo.srcObject = stream;
+                    console.log('[RTC] Set video srcObject, video element:', {
+                        readyState: elements.guestVideo.readyState,
+                        paused: elements.guestVideo.paused,
+                        videoWidth: elements.guestVideo.videoWidth,
+                        videoHeight: elements.guestVideo.videoHeight
+                    });
+                    
+                    // Explicitly try to play
+                    elements.guestVideo.play().then(function() {
+                        console.log('[RTC] Video playback started successfully');
+                    }).catch(function(err) {
+                        console.error('[RTC] Video play failed:', err);
+                    });
+                    
+                    // Monitor video element state
+                    elements.guestVideo.onloadedmetadata = function() {
+                        console.log('[RTC] Video metadata loaded:', elements.guestVideo.videoWidth, 'x', elements.guestVideo.videoHeight);
+                    };
+                    elements.guestVideo.onplaying = function() {
+                        console.log('[RTC] Video is now playing');
+                        elements.streamOverlay.classList.add('hidden');
+                        elements.streamStatusDot.classList.add('connected');
+                        elements.streamStatusText.textContent = 'Connected to host';
+                    };
+                    
                     elements.streamOverlay.classList.add('hidden');
                     elements.streamStatusDot.classList.add('connected');
                     elements.streamStatusText.textContent = 'Connected to host';
                     state.mp.inputsEnabled = true;
+                } else {
+                    console.error('[RTC] No streams in track event!');
                 }
             };
             
@@ -3374,6 +3407,14 @@
                     elements.streamStatusDot.classList.remove('connected');
                     elements.streamStatusText.textContent = 'Disconnected';
                 }
+            };
+            
+            pc.oniceconnectionstatechange = function() {
+                console.log('[RTC] ICE connection state:', pc.iceConnectionState);
+            };
+            
+            pc.onicegatheringstatechange = function() {
+                console.log('[RTC] ICE gathering state:', pc.iceGatheringState);
             };
             
             // Set remote description and create answer
