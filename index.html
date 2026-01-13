@@ -13,7 +13,7 @@
     <script>
         window.N64_VAULT_CONFIG = {
             // ========== VERSION (for cache busting) ==========
-            version: '2.0.10-debug-ice',
+            version: '2.0.12-debug-sdp-candidates',
             
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
@@ -3297,12 +3297,21 @@
             // ICE candidate handling
             pc.onicecandidate = function(e) {
                 if (e.candidate) {
-                    console.log('[RTC] Host sending ICE candidate to guest:', e.candidate.candidate.split(' ')[7]);
+                    var candidateType = 'unknown';
+                    try {
+                        var parts = e.candidate.candidate.split(' ');
+                        candidateType = parts.length > 7 ? parts[7] : parts[0];
+                    } catch (err) {
+                        console.warn('[RTC] Could not parse candidate type:', err);
+                    }
+                    console.log('[RTC] Host sending ICE candidate to guest, type:', candidateType, 'full:', e.candidate.candidate.substring(0, 80));
                     mpSend({
                         type: 'rtc-ice',
                         targetId: guestId,
                         candidate: e.candidate
                     });
+                } else {
+                    console.log('[RTC] Host ICE gathering complete (null candidate)');
                 }
             };
             
@@ -3332,8 +3341,15 @@
         // GUEST: Handle incoming offer from host
         function rtcHandleOffer(hostId, sdp) {
             console.log('[RTC] Received offer from host');
+            console.log('[RTC] Offer SDP has candidates:', sdp.sdp.includes('a=candidate'));
             
             var pc = new RTCPeerConnection(RTC_CONFIG);
+            console.log('[RTC] Created peer connection, initial states:', {
+                connectionState: pc.connectionState,
+                iceConnectionState: pc.iceConnectionState,
+                iceGatheringState: pc.iceGatheringState,
+                signalingState: pc.signalingState
+            });
             state.mp.peers[hostId] = { pc: pc, dataChannel: null };
             
             // Handle incoming video track
@@ -3395,12 +3411,21 @@
             // ICE candidate handling
             pc.onicecandidate = function(e) {
                 if (e.candidate) {
-                    console.log('[RTC] Guest sending ICE candidate to host:', e.candidate.candidate.split(' ')[7]);
+                    var candidateType = 'unknown';
+                    try {
+                        var parts = e.candidate.candidate.split(' ');
+                        candidateType = parts.length > 7 ? parts[7] : parts[0];
+                    } catch (err) {
+                        console.warn('[RTC] Could not parse candidate type:', err);
+                    }
+                    console.log('[RTC] Guest sending ICE candidate to host, type:', candidateType, 'full:', e.candidate.candidate.substring(0, 80));
                     mpSend({
                         type: 'rtc-ice',
                         targetId: hostId,
                         candidate: e.candidate
                     });
+                } else {
+                    console.log('[RTC] Guest ICE gathering complete (null candidate)');
                 }
             };
             
@@ -3437,10 +3462,15 @@
             
             // Set remote description and create answer
             pc.setRemoteDescription(new RTCSessionDescription(sdp)).then(function() {
+                console.log('[RTC] Remote description set, creating answer...');
                 return pc.createAnswer();
             }).then(function(answer) {
+                console.log('[RTC] Answer created, setting local description...');
+                console.log('[RTC] Answer SDP has candidates:', answer.sdp.includes('a=candidate'));
                 return pc.setLocalDescription(answer);
             }).then(function() {
+                console.log('[RTC] Local description set, gathering state:', pc.iceGatheringState);
+                console.log('[RTC] Final answer has candidates:', pc.localDescription.sdp.includes('a=candidate'));
                 mpSend({
                     type: 'rtc-answer',
                     targetId: hostId,
@@ -3465,16 +3495,26 @@
         
         // Handle ICE candidate from peer
         function rtcHandleIce(peerId, candidate) {
-            console.log('[RTC] Received ICE candidate from:', peerId, 'type:', candidate.candidate ? candidate.candidate.split(' ')[7] : 'unknown');
+            var candidateType = 'unknown';
+            try {
+                if (candidate && candidate.candidate) {
+                    var parts = candidate.candidate.split(' ');
+                    candidateType = parts.length > 7 ? parts[7] : parts[0];
+                }
+            } catch (err) {
+                console.warn('[RTC] Could not parse received candidate type:', err);
+            }
+            console.log('[RTC] Received ICE candidate from:', peerId, 'type:', candidateType);
+            
             var peer = state.mp.peers[peerId];
             if (peer && peer.pc) {
                 peer.pc.addIceCandidate(new RTCIceCandidate(candidate)).then(function() {
-                    console.log('[RTC] ICE candidate added successfully');
+                    console.log('[RTC] ICE candidate added successfully, type:', candidateType);
                 }).catch(function(e) {
                     console.error('[RTC] Failed to add ICE candidate:', e);
                 });
             } else {
-                console.warn('[RTC] No peer connection found for:', peerId);
+                console.warn('[RTC] No peer connection found for:', peerId, 'available peers:', Object.keys(state.mp.peers));
             }
         }
         
