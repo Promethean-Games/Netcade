@@ -2856,8 +2856,12 @@
         }
         
         function mpSend(msg) {
+            console.log('[MP] mpSend called:', msg.type, 'ws state:', state.mp.ws ? state.mp.ws.readyState : 'null');
             if (state.mp.ws && state.mp.ws.readyState === WebSocket.OPEN) {
+                console.log('[MP] Sending message:', JSON.stringify(msg).substring(0, 200));
                 state.mp.ws.send(JSON.stringify(msg));
+            } else {
+                console.warn('[MP] Cannot send - WebSocket not connected. ws:', state.mp.ws, 'readyState:', state.mp.ws ? state.mp.ws.readyState : 'N/A');
             }
         }
         
