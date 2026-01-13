@@ -13,7 +13,7 @@
     <script>
         window.NETCADE_CONFIG = {
             // ========== VERSION (for cache busting) ==========
-            version: '3.0.1-ice-fix',
+            version: '3.0.2-ice-diag',
             
             // ========== MULTIPLAYER BACKEND ==========
             // Set to your backend URL for multiplayer support
@@ -3565,46 +3565,84 @@
         // Test ICE gathering capability on page load
         function rtcTestIceGathering() {
             console.log('[RTC] Testing ICE gathering capability...');
-            var testPc = new RTCPeerConnection(RTC_CONFIG);
-            var candidatesFound = [];
+            console.log('[RTC] Browser:', navigator.userAgent);
+            console.log('[RTC] RTCPeerConnection available:', !!window.RTCPeerConnection);
             
-            testPc.onicecandidate = function(e) {
+            // First test with NO servers (should at least get host candidates)
+            console.log('[RTC] Test 1: Minimal config (host candidates only)...');
+            var testPc1 = new RTCPeerConnection({});
+            var hostCandidates = [];
+            
+            testPc1.onicecandidate = function(e) {
                 if (e.candidate) {
-                    var type = e.candidate.candidate.includes('typ host') ? 'host' :
-                               e.candidate.candidate.includes('typ srflx') ? 'srflx' :
-                               e.candidate.candidate.includes('typ relay') ? 'relay' : 'unknown';
-                    candidatesFound.push(type);
-                    console.log('[RTC] Test found candidate type:', type);
+                    hostCandidates.push(e.candidate.candidate);
+                    console.log('[RTC] Host candidate:', e.candidate.candidate.substring(0, 80) + '...');
                 }
             };
             
-            testPc.onicegatheringstatechange = function() {
-                if (testPc.iceGatheringState === 'complete') {
-                    console.log('[RTC] ICE test complete. Candidates found:', candidatesFound.length, candidatesFound);
-                    if (candidatesFound.length === 0) {
-                        console.warn('[RTC] WARNING: No ICE candidates could be gathered. WebRTC may not work.');
-                        console.warn('[RTC] This could be due to: VPN, firewall, browser privacy settings, or network restrictions.');
-                    }
-                    testPc.close();
-                }
-            };
-            
-            // Create a data channel to trigger ICE gathering
-            testPc.createDataChannel('test');
-            testPc.createOffer().then(function(offer) {
-                return testPc.setLocalDescription(offer);
+            testPc1.createDataChannel('test1');
+            testPc1.createOffer().then(function(offer) {
+                return testPc1.setLocalDescription(offer);
             }).catch(function(e) {
-                console.error('[RTC] ICE test failed:', e);
-                testPc.close();
+                console.error('[RTC] Test 1 failed:', e);
             });
             
-            // Cleanup after 10 seconds
+            // After 5s, check results and test with STUN
             setTimeout(function() {
-                if (testPc.iceGatheringState !== 'complete') {
-                    console.log('[RTC] ICE test timeout. Candidates found so far:', candidatesFound.length, candidatesFound);
+                console.log('[RTC] Test 1 result: ' + hostCandidates.length + ' host candidates');
+                if (hostCandidates.length === 0) {
+                    console.error('[RTC] CRITICAL: No host candidates! WebRTC may be disabled.');
+                    console.error('[RTC] Check: chrome://webrtc-internals or about:webrtc');
+                    console.error('[RTC] Possible causes:');
+                    console.error('[RTC]   - Browser privacy settings blocking WebRTC');
+                    console.error('[RTC]   - VPN with WebRTC leak protection enabled');
+                    console.error('[RTC]   - Browser extension blocking WebRTC');
+                    console.error('[RTC]   - Corporate firewall or proxy');
                 }
-                try { testPc.close(); } catch(e) {}
-            }, 10000);
+                try { testPc1.close(); } catch(e) {}
+                
+                // Test 2: With STUN servers
+                console.log('[RTC] Test 2: STUN servers (srflx candidates)...');
+                var testPc2 = new RTCPeerConnection(RTC_CONFIG);
+                var stunCandidates = [];
+                
+                testPc2.onicecandidate = function(e) {
+                    if (e.candidate && e.candidate.candidate) {
+                        var c = e.candidate.candidate;
+                        var type = c.includes('typ host') ? 'host' :
+                                   c.includes('typ srflx') ? 'srflx' :
+                                   c.includes('typ relay') ? 'relay' : 'unknown';
+                        stunCandidates.push(type);
+                        console.log('[RTC] STUN test candidate:', type);
+                    }
+                };
+                
+                testPc2.createDataChannel('test2');
+                testPc2.createOffer().then(function(offer) {
+                    return testPc2.setLocalDescription(offer);
+                }).catch(function(e) {
+                    console.error('[RTC] Test 2 failed:', e);
+                });
+                
+                setTimeout(function() {
+                    console.log('[RTC] Test 2 result:', stunCandidates);
+                    var hasHost = stunCandidates.includes('host');
+                    var hasSrflx = stunCandidates.includes('srflx');
+                    var hasRelay = stunCandidates.includes('relay');
+                    
+                    console.log('[RTC] Summary: host=' + hasHost + ', srflx=' + hasSrflx + ', relay=' + hasRelay);
+                    
+                    if (!hasHost && !hasSrflx && !hasRelay) {
+                        console.error('[RTC] FAILED: No ICE candidates at all. WebRTC is blocked.');
+                    } else if (!hasSrflx && !hasRelay) {
+                        console.warn('[RTC] WARNING: Only host candidates. STUN/TURN blocked. Multiplayer will only work on same network.');
+                    } else {
+                        console.log('[RTC] SUCCESS: ICE gathering is working!');
+                    }
+                    
+                    try { testPc2.close(); } catch(e) {}
+                }, 8000);
+            }, 5000);
         }
         
         // Run ICE test when multiplayer panel opens
