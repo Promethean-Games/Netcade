@@ -3074,6 +3074,121 @@
             12: 'Up', 13: 'Down', 14: 'Left', 15: 'Right', 16: 'Guide'
         };
         
+        // ===== Controller Recognition Patterns =====
+        // Patterns are checked in order; be specific to avoid misclassification
+        var controllerPatterns = {
+            genesis: [
+                /sega.*genesis/i, /mega.*drive/i, /8bitdo.*m30/i, /retrobit.*genesis/i,
+                /retro-bit.*sega/i, /hyperkin.*genesis/i, /sega.*6.*button/i,
+                /genesis.*wireless/i, /md.*controller/i, /sega.*saturn/i
+            ],
+            snes: [
+                /8bitdo.*sn30/i, /8bitdo.*sf30/i, /8bitdo.*n30/i,
+                /retrobit.*snes/i, /hyperkin.*snes/i, /sfc.*controller/i,
+                /super.*famicom/i, /buffalo.*classic.*gamepad/i,
+                /nes.*classic.*controller/i, /snes.*classic/i
+            ],
+            n64: [
+                /n64/i, /nintendo.*64/i, /retro-bit.*tribute.*64/i, /brawler.*64/i,
+                /raphnet/i, /adaptoid/i, /tribute64/i
+            ],
+            xbox: [
+                /xbox/i, /xinput/i, /microsoft.*controller/i
+            ],
+            playstation: [
+                /dualshock/i, /dualsense/i, /playstation.*controller/i, 
+                /wireless.*controller.*054c/i
+            ]
+        };
+        
+        // Controller-specific default mappings
+        // N64 needs: A, B, Start, Z, L, R, 4 C-buttons, D-pad, Analog stick
+        // Note: Some mappings intentionally share buttons where hardware doesn't have enough
+        // Users can always customize via the wizard for their specific controller
+        var controllerDefaultMaps = {
+            genesis: {
+                // 6-button Genesis/MD has 8 buttons total, not enough for all N64 controls
+                // Prioritizes main gameplay: A/B actions, D-pad for both D-pad and analog
+                // C-buttons map to C/X/Y/Z, shoulders share with Y/Z
+                a: 'Button:0', b: 'Button:1', start: 'Button:9', z: 'Button:8',
+                l: 'Button:4', r: 'Button:5',
+                cUp: 'Button:3', cDown: 'Button:2', cLeft: 'Button:4', cRight: 'Button:5',
+                dUp: 'Hat:up', dDown: 'Hat:down', dLeft: 'Hat:left', dRight: 'Hat:right',
+                stickUp: 'Hat:up', stickDown: 'Hat:down', stickLeft: 'Hat:left', stickRight: 'Hat:right'
+            },
+            snes: {
+                // SNES has 8 buttons (B/A/Y/X/L/R/Select/Start), no analog
+                // A/B for main actions, D-pad for both movement types
+                // C-up/down=X/Y, C-left/right share with L/R (intentional - limited buttons)
+                a: 'Button:1', b: 'Button:0', start: 'Button:9', z: 'Button:8',
+                l: 'Button:4', r: 'Button:5',
+                cUp: 'Button:3', cDown: 'Button:2', cLeft: 'Button:4', cRight: 'Button:5',
+                dUp: 'Hat:up', dDown: 'Hat:down', dLeft: 'Hat:left', dRight: 'Hat:right',
+                stickUp: 'Hat:up', stickDown: 'Hat:down', stickLeft: 'Hat:left', stickRight: 'Hat:right'
+            },
+            n64: {
+                // Native N64 USB controllers (Brawler64, Tribute64, etc.)
+                // These have proper C-buttons as digital inputs, typically mapped to right stick
+                // Most adapters use: analog=Axis0/1, C-buttons=Axis2/3 or buttons 1/3/etc
+                a: 'Button:0', b: 'Button:2', start: 'Button:9', z: 'Button:6',
+                l: 'Button:4', r: 'Button:5',
+                cUp: 'Axis:3:-', cDown: 'Axis:3:+', cLeft: 'Axis:2:-', cRight: 'Axis:2:+',
+                dUp: 'Hat:up', dDown: 'Hat:down', dLeft: 'Hat:left', dRight: 'Hat:right',
+                stickUp: 'Axis:1:-', stickDown: 'Axis:1:+', stickLeft: 'Axis:0:-', stickRight: 'Axis:0:+'
+            },
+            xbox: {
+                // Xbox controllers have dual analog sticks - use right stick for C-buttons
+                // A=A, X=B, LT=Z, LB/RB=L/R, Left stick=analog, Right stick=C-buttons
+                a: 'Button:0', b: 'Button:2', start: 'Button:9', z: 'Button:6',
+                l: 'Button:4', r: 'Button:5',
+                cUp: 'Axis:3:-', cDown: 'Axis:3:+', cLeft: 'Axis:2:-', cRight: 'Axis:2:+',
+                dUp: 'Hat:up', dDown: 'Hat:down', dLeft: 'Hat:left', dRight: 'Hat:right',
+                stickUp: 'Axis:1:-', stickDown: 'Axis:1:+', stickLeft: 'Axis:0:-', stickRight: 'Axis:0:+'
+            },
+            playstation: {
+                // PlayStation controllers with dual sticks - use right stick for C-buttons
+                // Cross=A, Square=B, L2=Z, L1/R1=L/R, Left stick=analog, Right stick=C-buttons
+                a: 'Button:0', b: 'Button:2', start: 'Button:9', z: 'Button:6',
+                l: 'Button:4', r: 'Button:5',
+                cUp: 'Axis:3:-', cDown: 'Axis:3:+', cLeft: 'Axis:2:-', cRight: 'Axis:2:+',
+                dUp: 'Hat:up', dDown: 'Hat:down', dLeft: 'Hat:left', dRight: 'Hat:right',
+                stickUp: 'Axis:1:-', stickDown: 'Axis:1:+', stickLeft: 'Axis:0:-', stickRight: 'Axis:0:+'
+            }
+        };
+        
+        // Detect controller type from its ID string
+        function detectControllerType(gamepadId) {
+            if (!gamepadId) return 'generic';
+            
+            for (var type in controllerPatterns) {
+                var patterns = controllerPatterns[type];
+                for (var i = 0; i < patterns.length; i++) {
+                    if (patterns[i].test(gamepadId)) {
+                        return type;
+                    }
+                }
+            }
+            return 'generic';
+        }
+        
+        // Get friendly name for controller type
+        function getControllerTypeName(type) {
+            var names = {
+                genesis: 'Sega Genesis/MD',
+                snes: 'SNES/SFC',
+                n64: 'Nintendo 64',
+                xbox: 'Xbox',
+                playstation: 'PlayStation',
+                generic: 'Generic'
+            };
+            return names[type] || 'Generic';
+        }
+        
+        // Get default mapping for a controller type
+        function getDefaultMapForController(type) {
+            return controllerDefaultMaps[type] || defaultGamepadMap;
+        }
+        
         // ===== State =====
         function loadGamepadMaps() {
             var maps = {};
@@ -3889,11 +4004,23 @@
         function detectGamepads() {
             var gamepads = navigator.getGamepads();
             var connected = [];
+            // Track previous controllers by index+id combo to handle multiple same-model controllers
+            var previousControllers = {};
+            state.connectedGamepads.forEach(function(g) { 
+                previousControllers[g.index + ':' + g.id] = true;
+            });
             
             for (var i = 0; i < gamepads.length && connected.length < MAX_CONTROLLERS; i++) {
                 if (gamepads[i] && gamepads[i].connected) {
-                    connected.push({ index: gamepads[i].index, id: gamepads[i].id, gamepad: gamepads[i] });
-                    console.log('[Gamepad] Detected controller:', gamepads[i].id, 'at index', gamepads[i].index);
+                    var type = detectControllerType(gamepads[i].id);
+                    connected.push({ 
+                        index: gamepads[i].index, 
+                        id: gamepads[i].id, 
+                        gamepad: gamepads[i],
+                        type: type,
+                        typeName: getControllerTypeName(type)
+                    });
+                    console.log('[Gamepad] Detected controller:', gamepads[i].id, 'type:', type, 'at index', gamepads[i].index);
                 }
             }
             
@@ -3904,6 +4031,22 @@
                 console.log('[Gamepad] Connected count changed:', prevCount, '->', newCount);
             }
             
+            // Check for newly connected controllers to auto-apply mappings
+            connected.forEach(function(controller, idx) {
+                var controllerKey = controller.index + ':' + controller.id;
+                var isNew = !previousControllers[controllerKey];
+                var hasCustomMapping = localStorage.getItem(STORAGE_KEY_GAMEPAD_PREFIX + idx);
+                
+                if (isNew && !hasCustomMapping && controller.type !== 'generic') {
+                    var defaultMap = getDefaultMapForController(controller.type);
+                    state.gamepadMaps[idx] = Object.assign({}, defaultMap);
+                    console.log('[Gamepad] Auto-applied', controller.type, 'mapping for controller', idx);
+                    showToast('Controller Detected', 
+                        controller.typeName + ' controller detected! Default mappings applied.', 
+                        'success');
+                }
+            });
+            
             state.connectedGamepads = connected;
             
             if (newCount > 0 && prevCount === 0) {
@@ -3912,7 +4055,8 @@
                 updateControllerTabs();
                 updateGamepadBanner();
                 render();
-                setStatus(newCount + ' controller(s) connected', 'ready');
+                var typeInfo = connected[0].type !== 'generic' ? ' (' + connected[0].typeName + ')' : '';
+                setStatus(newCount + ' controller(s) connected' + typeInfo, 'ready');
             } else if (newCount === 0 && prevCount > 0) {
                 elements.tabGamepad.disabled = true;
                 elements.gamepadTabLabel.textContent = 'USB Controller';
@@ -3978,9 +4122,11 @@
             if (state.connectedGamepads.length > 0) {
                 var gp = state.connectedGamepads[state.selectedGamepadIndex];
                 if (gp) {
+                    var shortName = getShortGamepadName(gp.id);
+                    var typeLabel = gp.type && gp.type !== 'generic' ? ' [' + gp.typeName + ']' : '';
                     var label = state.connectedGamepads.length > 1 
-                        ? 'Player ' + (state.selectedGamepadIndex + 1) + ': ' + getShortGamepadName(gp.id)
-                        : getShortGamepadName(gp.id);
+                        ? 'Player ' + (state.selectedGamepadIndex + 1) + ': ' + shortName + typeLabel
+                        : shortName + typeLabel;
                     elements.gamepadName.textContent = label;
                 }
             }
@@ -4657,10 +4803,15 @@
             document.getElementById('wizardGamepad').addEventListener('click', function() { startWizard('gamepad'); });
             document.getElementById('resetGamepad').addEventListener('click', function() {
                 var idx = state.selectedGamepadIndex;
-                state.gamepadMaps[idx] = Object.assign({}, defaultGamepadMap);
+                var controller = state.connectedGamepads[idx];
+                var controllerType = controller ? controller.type : 'generic';
+                var defaultMap = getDefaultMapForController(controllerType);
+                state.gamepadMaps[idx] = Object.assign({}, defaultMap);
+                localStorage.removeItem(STORAGE_KEY_GAMEPAD_PREFIX + idx);
                 render();
                 var playerLabel = state.connectedGamepads.length > 1 ? 'Player ' + (idx + 1) + ' ' : '';
-                setStatus(playerLabel + 'controller mappings reset', 'ready');
+                var typeLabel = controllerType !== 'generic' ? ' (' + getControllerTypeName(controllerType) + ' defaults)' : '';
+                setStatus(playerLabel + 'controller mappings reset' + typeLabel, 'ready');
             });
             document.getElementById('saveGamepad').addEventListener('click', function() {
                 var idx = state.selectedGamepadIndex;
