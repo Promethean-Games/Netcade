@@ -4040,7 +4040,9 @@
                 if (isNew && !hasCustomMapping && controller.type !== 'generic') {
                     var defaultMap = getDefaultMapForController(controller.type);
                     state.gamepadMaps[idx] = Object.assign({}, defaultMap);
-                    console.log('[Gamepad] Auto-applied', controller.type, 'mapping for controller', idx);
+                    // Persist to localStorage so mappings survive page reload and work with new games
+                    saveMap(STORAGE_KEY_GAMEPAD_PREFIX + idx, state.gamepadMaps[idx]);
+                    console.log('[Gamepad] Auto-applied and saved', controller.type, 'mapping for controller', idx);
                     showToast('Controller Detected', 
                         controller.typeName + ' controller detected! Default mappings applied.', 
                         'success');
@@ -4533,8 +4535,9 @@
             
             function buildPlayerControls(playerIndex) {
                 var controls = {};
-                var kbMap = state.keyboardMap || {};
-                var gpMap = state.gamepadMaps[playerIndex] || state.gamepadMaps[0] || {};
+                // Re-read from localStorage to get the freshest mappings (auto-detected or user-saved)
+                var kbMap = loadMap(STORAGE_KEY_KEYBOARD, defaultKbFallback);
+                var gpMap = loadMap(STORAGE_KEY_GAMEPAD_PREFIX + playerIndex, defaultGpFallback);
                 
                 console.log('[Netcade] Building controls for player', playerIndex, 'kbMap:', kbMap, 'gpMap:', gpMap);
                 
