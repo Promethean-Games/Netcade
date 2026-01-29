@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Netcade - Multi-Console Retro Emulator</title>
-    <meta name="description" content="Play classic N64, SNES, and Genesis games directly in your browser with our sleek, modern emulator">
+    <meta name="description" content="Play classic N64, SNES, Genesis, GameCube, and Wii games directly in your browser with our sleek, modern emulator">
     
     <!-- ============================================
          NETCADE CONFIGURATION
@@ -27,7 +27,7 @@
             
             // ========== BRANDING ==========
             siteName: 'Netcade',
-            siteTagline: 'Play classic N64, SNES & Genesis games in your browser',
+            siteTagline: 'Play classic N64, SNES, Genesis, GameCube & Wii games in your browser',
             
             // ========== FEATURES ==========
             // Enable/disable features for your deployment
@@ -145,100 +145,135 @@
             color: var(--text);
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 24px;
+            padding: 12px 12px 80px 12px;
             line-height: 1.5;
             touch-action: manipulation;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
+            overflow-x: hidden;
         }
         
-        .header { text-align: center; margin-bottom: 32px; }
-        
-        .header-logo {
-            max-width: 320px;
-            width: 100%;
+        /* Splash Screen - First Time Only */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(ellipse at center, rgba(228, 63, 90, 0.15) 0%, transparent 60%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        .splash-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .splash-logo {
+            max-width: 280px;
+            width: 80%;
             height: auto;
-            margin-bottom: 8px;
-            filter: drop-shadow(0 0 20px var(--primary-glow));
+            filter: drop-shadow(0 0 30px var(--primary-glow));
+            animation: splash-glow 2s ease-in-out infinite alternate;
         }
-        
-        .header h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.75rem;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 8px;
-            text-shadow: 0 0 40px var(--primary-glow);
+        @keyframes splash-glow {
+            from { filter: drop-shadow(0 0 20px var(--primary-glow)); }
+            to { filter: drop-shadow(0 0 40px var(--primary-glow)); }
         }
-        
-        .header p {
+        .splash-tagline {
             font-family: 'Rajdhani', sans-serif;
             color: var(--text-muted);
-            font-size: 1.1rem;
-            font-weight: 500;
+            font-size: 1rem;
+            margin-top: 20px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .splash-tap {
+            font-family: 'Rajdhani', sans-serif;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-top: 40px;
+            animation: pulse 2s ease-in-out infinite;
         }
         
-        .container { max-width: 960px; width: 100%; }
+        .container { 
+            max-width: 960px; 
+            width: 100%; 
+            flex: 1;
+            padding-bottom: 20px;
+        }
         
-        /* Main Navigation Tabs */
+        @media (min-width: 768px) {
+            body { padding: 20px 20px 90px 20px; }
+        }
+        
+        /* Main Navigation Tabs - Fixed Bottom Bar */
         .main-tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             display: flex;
-            gap: 4px;
-            margin-bottom: 24px;
+            gap: 0;
             background: var(--bg-card);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 12px;
-            padding: 4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0;
+            z-index: 9990;
+            padding-bottom: env(safe-area-inset-bottom, 0);
         }
         
         .main-tab {
             flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 14px 20px;
+            gap: 4px;
+            padding: 10px 8px;
             background: transparent;
             border: none;
-            border-radius: 8px;
+            border-radius: 0;
             color: var(--text-muted);
             font-family: 'Rajdhani', sans-serif;
-            font-size: 1rem;
+            font-size: 0.7rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
         }
         .main-tab:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
-        .main-tab.active { background: rgba(228, 63, 90, 0.2); color: var(--primary); }
-        .main-tab svg { width: 20px; height: 20px; }
+        .main-tab.active { background: transparent; color: var(--primary); }
+        .main-tab svg { width: 22px; height: 22px; }
         
         .main-content { display: none; }
         .main-content.active { display: block; }
         .card {
             background: var(--bg-card);
             border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
         }
         
         .status-bar {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 16px 20px;
+            gap: 10px;
+            padding: 10px 14px;
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            margin-bottom: 24px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
         }
         
         .status-indicator {
@@ -266,21 +301,21 @@
         /* Game Grid */
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
         }
         .game-card {
             background: #1B1B2F;
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             border: 1px solid rgba(228, 63, 90, 0.2);
         }
         .game-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(228, 63, 90, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(228, 63, 90, 0.3);
             border-color: #E43F5A;
         }
         .game-card-cover {
@@ -291,48 +326,48 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 48px;
+            font-size: 36px;
             color: rgba(228, 63, 90, 0.5);
         }
         .game-card-cover svg {
-            width: 48px;
-            height: 48px;
+            width: 36px;
+            height: 36px;
             stroke: rgba(228, 63, 90, 0.5);
         }
         .game-card-info {
-            padding: 12px;
+            padding: 10px;
         }
         .game-card-title {
             font-family: 'Rajdhani', sans-serif;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: #fff;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
         .game-card-meta {
-            font-size: 11px;
+            font-size: 10px;
             color: rgba(255,255,255,0.5);
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }
         .game-card-badge {
             background: rgba(228, 63, 90, 0.2);
             color: #E43F5A;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 9px;
             font-weight: 600;
         }
         .game-card-console {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 10px;
+            top: 6px;
+            right: 6px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -349,6 +384,14 @@
             background: rgba(45, 140, 210, 0.9);
             color: #fff;
         }
+        .game-card-console.console-gc {
+            background: rgba(88, 55, 171, 0.9);
+            color: #fff;
+        }
+        .game-card-console.console-wii {
+            background: rgba(0, 163, 224, 0.9);
+            color: #fff;
+        }
         .game-grid-empty {
             text-align: center;
             padding: 32px;
@@ -358,17 +401,17 @@
         /* Console Filter Tabs */
         .console-filter {
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
+            gap: 6px;
+            margin-bottom: 12px;
             flex-wrap: wrap;
         }
         .console-filter-btn {
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.2);
             color: rgba(255,255,255,0.7);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 16px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -383,7 +426,7 @@
             color: #fff;
         }
         .console-filter-btn .count {
-            margin-left: 4px;
+            margin-left: 3px;
             opacity: 0.7;
         }
         .game-grid-loading {
@@ -394,18 +437,17 @@
 
         .upload-zone {
             border: 2px dashed rgba(228, 63, 90, 0.4);
-            border-radius: 16px;
-            padding: 48px 32px;
+            border-radius: 12px;
+            padding: 24px 16px;
             text-align: center;
             background: rgba(228, 63, 90, 0.05);
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
         .upload-zone:hover {
             background: rgba(228, 63, 90, 0.1);
             border-color: var(--primary);
-            transform: translateY(-2px);
         }
         .upload-zone.dragover {
             background: rgba(228, 63, 90, 0.15);
@@ -413,25 +455,25 @@
         }
         
         .upload-icon {
-            width: 64px; height: 64px;
-            margin: 0 auto 20px;
-            padding: 16px;
+            width: 48px; height: 48px;
+            margin: 0 auto 12px;
+            padding: 12px;
             background: rgba(228, 63, 90, 0.1);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .upload-icon svg { width: 32px; height: 32px; color: var(--primary); }
+        .upload-icon svg { width: 24px; height: 24px; color: var(--primary); }
         
         .upload-text {
             font-family: 'Rajdhani', sans-serif;
-            font-size: 1.25rem;
+            font-size: 1rem;
             font-weight: 600;
             color: var(--text);
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
-        .upload-hint { color: var(--text-dim); font-size: 0.9rem; }
+        .upload-hint { color: var(--text-dim); font-size: 0.8rem; }
         
         #file-upload { display: none; }
         #emulator-container { display: none; width: 100%; min-height: 500px; margin-bottom: 24px; position: relative; }
@@ -1151,11 +1193,18 @@
         }
         
         .footer {
-            margin-top: auto;
-            padding-top: 32px;
-            text-align: center;
+            display: none;
         }
-        .footer p { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 4px; }
+        @media (min-width: 768px) {
+            .footer {
+                display: block;
+                margin-top: auto;
+                padding-top: 24px;
+                padding-bottom: 80px;
+                text-align: center;
+            }
+        }
+        .footer p { color: var(--text-dim); font-size: 0.75rem; margin-bottom: 4px; }
         .footer a { color: var(--primary); text-decoration: none; }
         .footer a:hover { color: var(--secondary); }
         
@@ -1243,6 +1292,71 @@
             margin: 16px 0; cursor: pointer; transition: all 0.2s ease;
         }
         .mp-room-code:hover { background: rgba(228,63,90,0.2); }
+        
+        /* Tournament Director Styles */
+        .td-section {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .td-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 14px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .td-header:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+        .td-header.active { color: var(--primary); }
+        .td-chevron { margin-left: auto; transition: transform 0.2s ease; }
+        .td-header.active .td-chevron { transform: rotate(180deg); }
+        .td-content {
+            padding: 0 14px 14px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .td-desc {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        .td-code-row {
+            display: flex;
+            gap: 8px;
+        }
+        .td-code-input {
+            flex: 1;
+            font-size: 1.1rem !important;
+        }
+        .td-code-input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .td-shuffle-btn {
+            padding: 10px 14px !important;
+            min-width: auto;
+        }
+        .td-shuffle-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .td-lock-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 8px 10px;
+            background: rgba(255,193,7,0.1);
+            border-radius: 6px;
+            color: #ffc107;
+            font-size: 0.75rem;
+        }
         
         .mp-players { margin: 20px 0; }
         .mp-player {
@@ -1887,7 +2001,9 @@
         /* Hide all console-specific elements by default */
         .guest-touch-controls[data-console] .n64-only,
         .guest-touch-controls[data-console] .snes-only,
-        .guest-touch-controls[data-console] .genesis-only {
+        .guest-touch-controls[data-console] .genesis-only,
+        .guest-touch-controls[data-console] .gc-only,
+        .guest-touch-controls[data-console] .wii-only {
             display: none !important;
         }
         
@@ -1920,6 +2036,28 @@
         .guest-touch-controls[data-console="segaMD"] .guest-joystick,
         .guest-touch-controls[data-console="segaMD"] .guest-z-trigger,
         .guest-touch-controls[data-console="segaMD"] .guest-shoulder-btns {
+            display: none !important;
+        }
+        
+        /* Show GameCube-specific elements (similar to N64 layout with joystick) */
+        .guest-touch-controls[data-console="gc"] .gc-only {
+            display: flex !important;
+        }
+        .guest-touch-controls[data-console="gc"] .guest-joystick {
+            display: block !important;
+        }
+        .guest-touch-controls[data-console="gc"] .guest-c-btns {
+            display: none !important;
+        }
+        
+        /* Show Wii-specific elements (uses motion controls - simplified touch) */
+        .guest-touch-controls[data-console="wii"] .wii-only {
+            display: flex !important;
+        }
+        .guest-touch-controls[data-console="wii"] .guest-joystick {
+            display: block !important;
+        }
+        .guest-touch-controls[data-console="wii"] .guest-c-btns {
             display: none !important;
         }
         
@@ -2570,12 +2708,34 @@
         </div>
     </div>
     
-    <div class="header">
-        <img src="netcade-logo.png" alt="Netcade - Retro Gaming Emulator" class="header-logo" />
+    <!-- Splash Screen (First Time Only) -->
+    <div class="splash-screen" id="splashScreen">
+        <img src="netcade-logo.png" alt="Netcade" class="splash-logo" />
+        <p class="splash-tagline">Play classic N64, SNES & Genesis games in your browser</p>
+        <p class="splash-tap">Tap anywhere to continue</p>
     </div>
     <script>
         // Initialize version and theme
         document.getElementById('versionText').textContent = window.NETCADE_CONFIG?.version || 'unknown';
+        
+        // Splash screen (first time only)
+        (function() {
+            var splash = document.getElementById('splashScreen');
+            var hasSeenSplash = localStorage.getItem('netcade_splash_seen');
+            
+            if (hasSeenSplash) {
+                splash.classList.add('hidden');
+                setTimeout(function() { splash.style.display = 'none'; }, 100);
+            } else {
+                var dismissSplash = function() {
+                    localStorage.setItem('netcade_splash_seen', 'true');
+                    splash.classList.add('hidden');
+                    setTimeout(function() { splash.style.display = 'none'; }, 500);
+                };
+                splash.addEventListener('click', dismissSplash);
+                splash.addEventListener('touchstart', dismissSplash);
+            }
+        })();
         
         // Theme system
         (function() {
@@ -2628,6 +2788,8 @@
                 <button class="console-filter-btn" data-console="n64" data-testid="filter-n64">N64</button>
                 <button class="console-filter-btn" data-console="snes" data-testid="filter-snes">SNES</button>
                 <button class="console-filter-btn" data-console="segaMD" data-testid="filter-genesis">Genesis</button>
+                <button class="console-filter-btn" data-console="gc" data-testid="filter-gc">GameCube</button>
+                <button class="console-filter-btn" data-console="wii" data-testid="filter-wii">Wii</button>
             </div>
             
             <!-- Game Grid -->
@@ -2640,8 +2802,8 @@
                     </svg>
                 </div>
                 <div class="upload-text">Drop your ROM file here or click to browse</div>
-                <div class="upload-hint">Supports N64, SNES, Genesis ROMs and ZIP files</div>
-                <input type="file" id="file-upload" accept=".z64,.n64,.v64,.rom,.smc,.sfc,.fig,.swc,.md,.gen,.bin,.smd,.zip" />
+                <div class="upload-hint">Supports N64, SNES, Genesis, GameCube, Wii ROMs and ZIP files</div>
+                <input type="file" id="file-upload" accept=".z64,.n64,.v64,.rom,.smc,.sfc,.fig,.swc,.md,.gen,.bin,.smd,.iso,.gcm,.gcz,.dol,.wbfs,.wad,.rvz,.wia,.zip" />
             </div>
             
             <div id="emulator-container">
@@ -2988,6 +3150,29 @@
                             <label>Your Name</label>
                             <input type="text" class="mp-input" id="mpCreateName" placeholder="Enter your name" maxlength="20">
                         </div>
+                        
+                        <!-- Tournament Director Mode -->
+                        <div class="td-section" id="tdSection">
+                            <div class="td-header" id="tdToggle">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                <span>Tournament Director Mode</span>
+                                <svg class="td-chevron" id="tdChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                            <div class="td-content" id="tdContent" style="display: none;">
+                                <p class="td-desc">Set a custom room code before starting. Code locks once the first player joins.</p>
+                                <div class="td-code-row">
+                                    <input type="text" class="mp-input td-code-input" id="tdCustomCode" placeholder="ABCD12" maxlength="6" style="text-transform: uppercase; letter-spacing: 0.15em; font-family: 'Roboto Mono', monospace; text-align: center;">
+                                    <button class="btn btn-secondary td-shuffle-btn" id="tdShuffleBtn" title="Generate random code">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    </button>
+                                </div>
+                                <div class="td-lock-status" id="tdLockStatus" style="display: none;">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    <span>Code locked - players have joined</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 0.9rem;">
                             Create a room and share the code with friends. You'll be the host and run the emulator.
                         </p>
@@ -4652,7 +4837,9 @@
             var coreMap = {
                 n64: 'n64',
                 snes: 'snes',
-                segaMD: 'segaMD'
+                segaMD: 'segaMD',
+                gc: 'dolphin',
+                wii: 'dolphin'
             };
             var gameConsole = state.currentGame && state.currentGame.console ? state.currentGame.console : 'n64';
             var coreName = coreMap[gameConsole] || 'n64';
@@ -4819,7 +5006,9 @@
         var consoleExtensions = {
             n64: ['.z64', '.n64', '.v64', '.rom'],
             snes: ['.smc', '.sfc', '.fig', '.swc'],
-            segaMD: ['.md', '.gen', '.bin', '.smd']
+            segaMD: ['.md', '.gen', '.bin', '.smd'],
+            gc: ['.iso', '.gcm', '.gcz', '.dol'],
+            wii: ['.wbfs', '.wad', '.rvz', '.wia']
         };
         
         function detectConsole(filename) {
@@ -4846,7 +5035,9 @@
             var names = {
                 n64: 'Nintendo 64',
                 snes: 'Super Nintendo',
-                segaMD: 'Sega Genesis'
+                segaMD: 'Sega Genesis',
+                gc: 'Nintendo GameCube',
+                wii: 'Nintendo Wii'
             };
             return names[consoleId] || consoleId;
         }
@@ -4855,7 +5046,9 @@
             var names = {
                 n64: 'N64',
                 snes: 'SNES',
-                segaMD: 'Genesis'
+                segaMD: 'Genesis',
+                gc: 'GameCube',
+                wii: 'Wii'
             };
             return names[consoleId] || consoleId;
         }
@@ -5137,6 +5330,35 @@
                     setStatus('Room code copied!', 'ready');
                 }
             });
+            
+            // Tournament Director event handlers
+            var tdToggle = document.getElementById('tdToggle');
+            var tdContent = document.getElementById('tdContent');
+            var tdShuffleBtn = document.getElementById('tdShuffleBtn');
+            var tdCustomCode = document.getElementById('tdCustomCode');
+            
+            if (tdToggle && tdContent) {
+                tdToggle.addEventListener('click', function() {
+                    var isOpen = tdContent.style.display !== 'none';
+                    tdContent.style.display = isOpen ? 'none' : 'block';
+                    tdToggle.classList.toggle('active', !isOpen);
+                });
+            }
+            
+            if (tdShuffleBtn && tdCustomCode) {
+                tdShuffleBtn.addEventListener('click', function() {
+                    if (!tdCustomCode.disabled) {
+                        tdCustomCode.value = tdGenerateRoomCode();
+                    }
+                });
+            }
+            
+            if (tdCustomCode) {
+                // Force uppercase and filter invalid chars
+                tdCustomCode.addEventListener('input', function() {
+                    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                });
+            }
         }
         
         // ===== Multiplayer Functions =====
@@ -5254,6 +5476,10 @@
                     state.mp.isHost = msg.player.role === 'host';
                     mpShowLobby();
                     mpRenderPlayers();
+                    // Lock TD code if already have 2+ players (reconnect scenario)
+                    if (state.mp.isHost && msg.room.players.length >= 2) {
+                        tdLockCode();
+                    }
                     break;
                     
                 case 'player-joined':
@@ -5265,6 +5491,11 @@
                             state.mp.isHost = updated.role === 'host';
                         }
                         mpRenderPlayers();
+                        
+                        // Lock TD room code when first guest joins (host = 1 player, so lock at 2+)
+                        if (state.mp.isHost && msg.room.players.length >= 2) {
+                            tdLockCode();
+                        }
                         
                         // If host is already streaming, create peer for new guest
                         if (state.mp.isHost && state.mp.isStreaming && msg.player) {
@@ -5284,6 +5515,10 @@
                             state.mp.isHost = updated.role === 'host';
                         }
                         mpRenderPlayers();
+                        // Lock TD code if 2+ players (in case lock missed earlier)
+                        if (state.mp.isHost && msg.room.players.length >= 2) {
+                            tdLockCode();
+                        }
                     }
                     break;
                     
@@ -5485,6 +5720,37 @@
         
         var pendingAction = null;
         
+        // Tournament Director - Generate random room code
+        function tdGenerateRoomCode() {
+            var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            var code = '';
+            for (var i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+        
+        // Tournament Director - Get custom code if valid
+        function tdGetCustomCode() {
+            var input = document.getElementById('tdCustomCode');
+            if (!input) return null;
+            var code = input.value.trim().toUpperCase();
+            if (code.length === 6 && /^[A-Z0-9]+$/.test(code)) {
+                return code;
+            }
+            return null;
+        }
+        
+        // Tournament Director - Lock code controls
+        function tdLockCode() {
+            var input = document.getElementById('tdCustomCode');
+            var btn = document.getElementById('tdShuffleBtn');
+            var status = document.getElementById('tdLockStatus');
+            if (input) input.disabled = true;
+            if (btn) btn.disabled = true;
+            if (status) status.style.display = 'flex';
+        }
+        
         function mpCreateRoom() {
             console.log('mpCreateRoom called');
             var name = elements.mpCreateName.value.trim();
@@ -5499,7 +5765,13 @@
             var overlay = document.getElementById('mpConnectingOverlay');
             if (overlay) overlay.style.display = 'flex';
             
+            // Check for custom room code from Tournament Director mode
+            var customCode = tdGetCustomCode();
             pendingAction = { type: 'create-room', playerName: name };
+            if (customCode) {
+                pendingAction.customRoomCode = customCode;
+                console.log('Using custom room code:', customCode);
+            }
             console.log('Pending action set:', pendingAction);
             
             if (state.mp.ws && state.mp.ws.readyState === WebSocket.OPEN) {
