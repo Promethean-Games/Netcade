@@ -1157,7 +1157,46 @@
             color: var(--text-dim);
             font-family: 'Roboto Mono', monospace;
         }
-        
+
+        .pro-unlock-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .pro-unlock-input {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 12px;
+            background: var(--bg-element);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        .pro-unlock-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .pro-unlock-btn {
+            padding: 10px 14px;
+        }
+        .pro-unlock-hint {
+            margin-top: 8px;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        .pro-unlock-status {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--warning);
+        }
+        .pro-unlock-status.unlocked {
+            color: var(--success);
+        }
+
         /* Spinner Animation */
         .spinner {
             width: 32px;
@@ -2641,6 +2680,15 @@
                         </button>
                     </div>
                 </div>
+                <div class="settings-section">
+                    <div class="settings-section-title">Pro-unlock</div>
+                    <div class="pro-unlock-row">
+                        <input type="text" id="proUnlockInput" class="pro-unlock-input" placeholder="Enter unlock code" autocomplete="off" spellcheck="false" data-testid="input-pro-unlock">
+                        <button class="btn btn-primary pro-unlock-btn" id="proUnlockBtn" data-testid="button-pro-unlock">Unlock</button>
+                    </div>
+                    <div class="pro-unlock-hint">Code: <strong>NETCADE</strong> (visible text input)</div>
+                    <div class="pro-unlock-status" id="proUnlockStatus">Pro ROMs locked</div>
+                </div>
             </div>
             <div class="settings-footer">
                 <p id="settingsVersion">Netcade v<span id="versionText"></span></p>
@@ -3743,13 +3791,143 @@
         // Game library state
         var games = [];
         var selectedGame = null;
-        
+
+        var PRO_UNLOCK_CODE = 'NETCADE';
+        var STORAGE_KEY_PRO_UNLOCKED = 'netcade_pro_unlocked';
+        var PRO_ROM_BASE_PATH = 'pro-roms/';
+
+        var PRO_UNLOCKABLE_ROMS = [
+            { id: 'pro-001', title: 'Banjo-Kazooie', filename: 'Banjo-Kazooie.zip', relativePath: 'Banjo-Kazooie.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-002', title: 'Bomberman 64', filename: 'Bomberman 64.zip', relativePath: 'Bomberman 64.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-003', title: "Cruis'n Exotica", filename: "Cruis'n Exotica.z64", relativePath: "Cruis'n Exotica.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-004', title: "Cruis'n USA", filename: "Cruis'n USA.z64", relativePath: "Cruis'n USA.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-005', title: "Cruis'n World", filename: "Cruis'n World.z64", relativePath: "Cruis'n World.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-006', title: 'Diddy Kong Racing', filename: 'Diddy Kong Racing.z64', relativePath: 'Diddy Kong Racing.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-007', title: 'Donkey Kong 64', filename: 'Donkey Kong 64.zip', relativePath: 'Donkey Kong 64.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-008', title: 'Doom 64', filename: 'Doom 64.z64', relativePath: 'Doom 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-009', title: 'Duke Nukem 64', filename: 'Duke Nukem 64.z64', relativePath: 'Duke Nukem 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-010', title: 'Earthworm Jim 3D', filename: 'Earthworm Jim 3D.z64', relativePath: 'Earthworm Jim 3D.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-011', title: 'Excitebike 64', filename: 'Excitebike 64.z64', relativePath: 'Excitebike 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-012', title: 'F-Zero X', filename: 'F-Zero X.z64', relativePath: 'F-Zero X.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-013', title: 'Gauntlet Legends', filename: 'Gauntlet Legends.zip', relativePath: 'Gauntlet Legends.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-014', title: 'GoldenEye 007', filename: 'GoldenEye 007.z64', relativePath: 'GoldenEye 007.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-015', title: "Ken Griffey, Jr.'s Slugfest", filename: "Ken Griffey, Jr.'s Slugfest.z64", relativePath: "Ken Griffey, Jr.'s Slugfest.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-016', title: "Legend of Zelda, The_ Majora's Mask", filename: "Legend of Zelda, The_ Majora's Mask.zip", relativePath: "Legend of Zelda, The_ Majora's Mask.zip", console: 'n64', genre: 'Pro' },
+            { id: 'pro-017', title: 'Madden NFL 2002', filename: 'Madden NFL 2002.z64', relativePath: 'Madden NFL 2002.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-018', title: 'Mario Golf', filename: 'Mario Golf.z64', relativePath: 'Mario Golf.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-019', title: 'Mario Party 3', filename: 'Mario Party 3.z64', relativePath: 'Mario Party 3.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-020', title: 'Mario Tennis', filename: 'Mario Tennis.z64', relativePath: 'Mario Tennis.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-021', title: 'Super Mario 64 (Mario folder ZIP)', filename: 'Super Mario 64.zip', relativePath: 'Mario/Super Mario 64.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-022', title: 'Monopoly', filename: 'Monopoly.zip', relativePath: 'Monopoly.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-023', title: 'Monster Truck Madness 64', filename: 'Monster Truck Madness 64.z64', relativePath: 'Monster Truck Madness 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-024', title: 'Mortal Kombat 4', filename: 'Mortal Kombat 4.zip', relativePath: 'Mortal Kombat 4.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-025', title: 'Mortal Kombat Trilogy', filename: 'Mortal Kombat Trilogy.z64', relativePath: 'Mortal Kombat Trilogy.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-026', title: 'NBA Jam 2000', filename: 'NBA Jam 2000.z64', relativePath: 'NBA Jam 2000.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-027', title: 'Neon Genesis Evangelion (J)', filename: 'Neon Genesis Evangelion (J).z64', relativePath: 'Neon Genesis Evangelion (J).z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-028', title: 'New Tetris, The', filename: 'New Tetris, The.zip', relativePath: 'New Tetris, The.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-029', title: 'NFL Blitz 2001', filename: 'NFL Blitz 2001.z64', relativePath: 'NFL Blitz 2001.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-030', title: 'NFL Blitz Special Edition', filename: 'NFL Blitz Special Edition.z64', relativePath: 'NFL Blitz Special Edition.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-031', title: 'Off Road Challenge', filename: 'Off Road Challenge.z64', relativePath: 'Off Road Challenge.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-032', title: 'Pokemon Snap', filename: 'Pokemon Snap.z64', relativePath: 'Pokemon Snap.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-033', title: 'Pokemon Stadium 2', filename: 'Pokemon Stadium 2.z64', relativePath: 'Pokemon Stadium 2.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-034', title: 'Quake 64', filename: 'Quake 64.z64', relativePath: 'Quake 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-035', title: 'Rainbow Six', filename: 'Rainbow Six.z64', relativePath: 'Rainbow Six.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-036', title: 'Rampage 2 - Universal Tour', filename: 'Rampage 2 - Universal Tour.z64', relativePath: 'Rampage 2 - Universal Tour.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-037', title: 'Rampage World Tour', filename: 'Rampage World Tour.z64', relativePath: 'Rampage World Tour.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-038', title: 'Rayman 2 - The Great Escape', filename: 'Rayman 2 - The Great Escape.z64', relativePath: 'Rayman 2 - The Great Escape.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-039', title: 'Resident Evil 2', filename: 'Resident Evil 2.z64', relativePath: 'Resident Evil 2.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-040', title: 'Road Rash 64', filename: 'Road Rash 64.z64', relativePath: 'Road Rash 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-041', title: 'Space Invaders', filename: 'Space Invaders.zip', relativePath: 'Space Invaders.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-042', title: 'StarCraft 64', filename: 'StarCraft 64.z64', relativePath: 'StarCraft 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-043', title: 'Super Mario 64 (root ZIP)', filename: 'Super Mario 64.zip', relativePath: 'Super Mario 64.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-044', title: 'Super Mario 64 (Z64)', filename: 'Super Mario 64.z64', relativePath: 'Super Mario 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-045', title: 'Super Smash Bros.', filename: 'Super Smash Bros..z64', relativePath: 'Super Smash Bros..z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-046', title: 'The Legend of Zelda - Ocarina of Time', filename: 'The Legend of Zelda - Ocarina of Time.z64', relativePath: 'The Legend of Zelda - Ocarina of Time.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-047', title: "Tony Hawk's Pro Skater", filename: "Tony Hawk's Pro Skater.z64", relativePath: "Tony Hawk's Pro Skater.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-048', title: "Tony Hawk's Pro Skater 2", filename: "Tony Hawk's Pro Skater 2.z64", relativePath: "Tony Hawk's Pro Skater 2.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-049', title: "Tony Hawk's Pro Skater 3", filename: "Tony Hawk's Pro Skater 3.z64", relativePath: "Tony Hawk's Pro Skater 3.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-050', title: 'Toy Story 2 - Buzz Lightyear to the Rescue', filename: 'Toy Story 2 - Buzz Lightyear to the Rescue.z64', relativePath: 'Toy Story 2 - Buzz Lightyear to the Rescue.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-051', title: 'Virtual Chess 64 (ZIP)', filename: 'Virtual Chess 64.zip', relativePath: 'Virtual Chess 64.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-052', title: 'Virtual Chess 64 (Z64)', filename: 'Virtual Chess 64.z64', relativePath: 'Virtual Chess 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-053', title: 'Virtual Pinball', filename: 'Virtual Pinball.zip', relativePath: 'Virtual Pinball.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-054', title: 'Virtual Pool 64', filename: 'Virtual Pool 64.z64', relativePath: 'Virtual Pool 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-055', title: 'Wave Race 64', filename: 'Wave Race 64.z64', relativePath: 'Wave Race 64.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-056', title: 'Wheel of Fortune', filename: 'Wheel of Fortune.z64', relativePath: 'Wheel of Fortune.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-057', title: 'WWF WrestleMania 2000', filename: 'WWF WrestleMania 2000.z64', relativePath: 'WWF WrestleMania 2000.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-058', title: 'Xena - Warrior Princess - The Talisman of Fate', filename: 'Xena - Warrior Princess - The Talisman of Fate.z64', relativePath: 'Xena - Warrior Princess - The Talisman of Fate.z64', console: 'n64', genre: 'Pro' },
+            { id: 'pro-059', title: "Yoshi's Story", filename: "Yoshi's Story.z64", relativePath: "Yoshi's Story.z64", console: 'n64', genre: 'Pro' }
+        ];
+
+        var PRO_UNLOCKABLE_GAME_IDS = {};
+        PRO_UNLOCKABLE_ROMS.forEach(function(game) {
+            PRO_UNLOCKABLE_GAME_IDS[game.id] = true;
+        });
+
         // No bundled ROMs are shipped with this deployment.
         var BUNDLED_HOMEBREW = [];
         var REMOVED_BUNDLED_GAME_IDS = {
             'homebrew-controller-test': true,
             'homebrew-bird-kart': true
         };
+
+        function isProUnlocked() {
+            return localStorage.getItem(STORAGE_KEY_PRO_UNLOCKED) === 'true';
+        }
+
+        function getProRomBaseUrl() {
+            return new URL('./' + PRO_ROM_BASE_PATH, window.location.href).href;
+        }
+
+        function encodePathPreservingSlashes(path) {
+            return (path || '').split('/').map(function(part) {
+                return encodeURIComponent(part);
+            }).join('/');
+        }
+
+        function buildProUnlockableGames() {
+            var baseUrl = getProRomBaseUrl();
+            return PRO_UNLOCKABLE_ROMS.map(function(game) {
+                var copy = Object.assign({}, game);
+                var relativePath = (game.relativePath || game.path || game.filename || '').replace(/^\/+/, '');
+                if (!relativePath) return null;
+                copy.romUrl = new URL(encodePathPreservingSlashes(relativePath), baseUrl).href;
+                if (!copy.filename) {
+                    copy.filename = relativePath.split('/').pop();
+                }
+                return copy;
+            }).filter(function(game) { return !!game; });
+        }
+
+        function filterLockedProGames(list, proUnlocked) {
+            if (!Array.isArray(list)) return [];
+            return list.filter(function(game) {
+                if (!game) return false;
+                if (proUnlocked) return true;
+                return !PRO_UNLOCKABLE_GAME_IDS[(game.id || '').toString()];
+            });
+        }
+
+        function mergeGamesById(baseGames, extraGames) {
+            var merged = (baseGames || []).slice();
+            var seen = {};
+            merged.forEach(function(game) {
+                if (game && game.id != null) seen[game.id] = true;
+            });
+            (extraGames || []).forEach(function(game) {
+                if (!game || game.id == null || seen[game.id]) return;
+                merged.push(game);
+                seen[game.id] = true;
+            });
+            return merged;
+        }
+
+        function updateProUnlockStatus() {
+            var statusEl = document.getElementById('proUnlockStatus');
+            if (!statusEl) return;
+            var unlocked = isProUnlocked();
+            statusEl.textContent = unlocked ? 'Pro ROMs unlocked' : 'Pro ROMs locked';
+            statusEl.classList.toggle('unlocked', unlocked);
+        }
 
         function filterRemovedBundledGames(list) {
             if (!Array.isArray(list)) return [];
@@ -3766,13 +3944,15 @@
         function loadGames() {
             console.log('[Netcade] loadGames() called');
             elements.gameGrid.innerHTML = '<div class="game-grid-loading">Loading games...</div>';
-            
+            var proUnlocked = isProUnlocked();
+
             var savedGames = [];
             try {
                 var saved = localStorage.getItem('netcade_games');
                 if (saved) savedGames = JSON.parse(saved);
             } catch (e) {}
-            
+            savedGames = filterLockedProGames(filterRemovedBundledGames(savedGames), proUnlocked);
+
             fetch('/api/games')
                 .then(function(res) {
                     console.log('[Netcade] /api/games response status:', res.status);
@@ -3781,12 +3961,20 @@
                 })
                 .then(function(data) {
                     console.log('[Netcade] Games loaded from API:', data.length, 'games');
-                    games = filterRemovedBundledGames(data);
+                    var loaded = filterLockedProGames(filterRemovedBundledGames(data), proUnlocked);
+                    if (proUnlocked) {
+                        loaded = mergeGamesById(loaded, buildProUnlockableGames());
+                    }
+                    games = loaded;
                     renderGameGrid();
                 })
                 .catch(function(err) {
                     console.log('[Netcade] API unavailable, using local games only');
-                    games = BUNDLED_HOMEBREW.concat(filterRemovedBundledGames(savedGames));
+                    var loaded = BUNDLED_HOMEBREW.concat(savedGames);
+                    if (proUnlocked) {
+                        loaded = mergeGamesById(loaded, buildProUnlockableGames());
+                    }
+                    games = loaded;
                     console.log('[Netcade] Total games:', games.length);
                     renderGameGrid();
                 });
@@ -3957,7 +4145,8 @@
                         return res.arrayBuffer();
                     })
                     .then(function(romData) {
-                        startEmulator(romData, game.filename || game.title);
+                        var sourceName = game.filename || getFileNameFromPath(game.romUrl) || game.title;
+                        loadRomDataOrZip(romData, sourceName);
                     })
                     .catch(function(err) {
                         console.error('[Netcade] Failed to load ROM from URL:', err);
@@ -3966,7 +4155,7 @@
                     });
             } else if (game.romData) {
                 console.log('[Netcade] Loading ROM from local storage');
-                startEmulator(game.romData, game.filename || game.title);
+                loadRomDataOrZip(game.romData, game.filename || game.title);
             } else {
                 // Fetch ROM from API (when running with backend)
                 fetch('/api/games/' + game.id + '/rom')
@@ -3975,7 +4164,7 @@
                         return res.arrayBuffer();
                     })
                     .then(function(romData) {
-                        startEmulator(romData, game.filename || game.title);
+                        loadRomDataOrZip(romData, game.filename || game.title);
                     })
                     .catch(function(err) {
                         console.error('[Netcade] Failed to load ROM:', err);
@@ -5056,7 +5245,84 @@
             };
             return names[consoleId] || consoleId;
         }
-        
+
+        function getFileNameFromPath(path) {
+            if (!path) return '';
+            try {
+                var parsed = new URL(path, window.location.href);
+                var pathname = parsed.pathname || '';
+                return decodeURIComponent(pathname.substring(pathname.lastIndexOf('/') + 1));
+            } catch (e) {
+                var clean = path.split('?')[0].split('#')[0];
+                var part = clean.substring(clean.lastIndexOf('/') + 1);
+                try {
+                    return decodeURIComponent(part);
+                } catch (decodeErr) {
+                    return part;
+                }
+            }
+        }
+
+        function extractRomFromZipArrayBuffer(zipArrayBuffer) {
+            return new Promise(function(resolve, reject) {
+                if (typeof JSZip === 'undefined') {
+                    reject(new Error('ZIP support not available'));
+                    return;
+                }
+
+                JSZip.loadAsync(zipArrayBuffer).then(function(zip) {
+                    var allRomExtensions = getAllRomExtensions();
+                    var romFile = null;
+                    var romFileName = null;
+
+                    // Find first ROM file in the ZIP, including files in nested folders.
+                    zip.forEach(function(relativePath, zipEntry) {
+                        if (romFile || zipEntry.dir) return;
+                        var entryExt = relativePath.toLowerCase().substring(relativePath.lastIndexOf('.'));
+                        if (allRomExtensions.indexOf(entryExt) !== -1) {
+                            romFile = zipEntry;
+                            romFileName = relativePath.split('/').pop();
+                        }
+                    });
+
+                    if (!romFile) {
+                        reject(new Error('No ROM found in ZIP file'));
+                        return;
+                    }
+
+                    romFile.async('arraybuffer').then(function(romData) {
+                        resolve({ romData: romData, romFileName: romFileName });
+                    }).catch(function(err) {
+                        reject(err);
+                    });
+                }).catch(function(err) {
+                    reject(err);
+                });
+            });
+        }
+
+        function loadRomDataOrZip(romData, sourceName) {
+            var name = sourceName || 'game.rom';
+            var lowerName = name.toLowerCase();
+
+            if (lowerName.endsWith('.zip')) {
+                setStatus('Extracting: ' + name, 'loading');
+                extractRomFromZipArrayBuffer(romData)
+                    .then(function(result) {
+                        setStatus('Loading: ' + result.romFileName, 'loading');
+                        startEmulator(result.romData, result.romFileName);
+                    })
+                    .catch(function(err) {
+                        console.error('[Netcade] Failed to extract ROM from ZIP:', err);
+                        setStatus('Failed to extract ROM: ' + err.message, 'error');
+                        showLibrary();
+                    });
+                return;
+            }
+
+            startEmulator(romData, name);
+        }
+
         function handleFile(file) {
             var romExtensions = getAllRomExtensions();
             var validExt = romExtensions.concat(['.zip']);
@@ -5094,38 +5360,12 @@
             
             var reader = new FileReader();
             reader.onload = function(e) {
-                JSZip.loadAsync(e.target.result).then(function(zip) {
-                    var allRomExtensions = getAllRomExtensions();
-                    var romFile = null;
-                    var romFileName = null;
-                    
-                    // Find first ROM file in the zip
-                    zip.forEach(function(relativePath, zipEntry) {
-                        if (romFile) return; // Already found one
-                        if (zipEntry.dir) return; // Skip directories
-                        
-                        var entryExt = relativePath.toLowerCase().substring(relativePath.lastIndexOf('.'));
-                        if (allRomExtensions.indexOf(entryExt) !== -1) {
-                            romFile = zipEntry;
-                            romFileName = relativePath.split('/').pop(); // Get just the filename
-                        }
-                    });
-                    
-                    if (!romFile) {
-                        setStatus('No ROM found in ZIP file', 'error');
-                        return;
-                    }
-                    
-                    setStatus('Loading: ' + romFileName, 'loading');
-                    romFile.async('arraybuffer').then(function(romData) {
-                        loadRomData(romData, romFileName);
-                    }).catch(function(err) {
-                        console.error('[Netcade] Failed to extract ROM:', err);
-                        setStatus('Failed to extract ROM', 'error');
-                    });
+                extractRomFromZipArrayBuffer(e.target.result).then(function(result) {
+                    setStatus('Loading: ' + result.romFileName, 'loading');
+                    loadRomData(result.romData, result.romFileName);
                 }).catch(function(err) {
                     console.error('[Netcade] Failed to read ZIP:', err);
-                    setStatus('Failed to read ZIP file', 'error');
+                    setStatus('Failed to read ZIP file: ' + err.message, 'error');
                 });
             };
             reader.onerror = function() { setStatus('Failed to read file', 'error'); };
@@ -5178,7 +5418,34 @@
                     option.classList.add('active');
                 }
             });
-            
+
+            // Pro unlock
+            var proUnlockInput = document.getElementById('proUnlockInput');
+            var proUnlockBtn = document.getElementById('proUnlockBtn');
+            if (proUnlockInput && proUnlockBtn) {
+                var submitProUnlock = function() {
+                    var entered = (proUnlockInput.value || '').trim().toUpperCase();
+                    if (entered === PRO_UNLOCK_CODE) {
+                        localStorage.setItem(STORAGE_KEY_PRO_UNLOCKED, 'true');
+                        updateProUnlockStatus();
+                        proUnlockInput.value = '';
+                        showToast('Pro Unlocked', 'Included ROMs are now available in your library.', 'success');
+                        loadGames();
+                    } else {
+                        showToast('Invalid Code', 'Please enter the correct Pro-unlock code.', 'error');
+                    }
+                };
+
+                proUnlockBtn.addEventListener('click', submitProUnlock);
+                proUnlockInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitProUnlock();
+                    }
+                });
+                updateProUnlockStatus();
+            }
+
             // Console filter
             if (elements.consoleFilter) {
                 elements.consoleFilter.addEventListener('click', function(e) {
