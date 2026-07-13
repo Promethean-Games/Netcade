@@ -3746,6 +3746,22 @@
         
         // No bundled ROMs are shipped with this deployment.
         var BUNDLED_HOMEBREW = [];
+        var REMOVED_BUNDLED_GAME_IDS = {
+            'homebrew-controller-test': true,
+            'homebrew-bird-kart': true
+        };
+
+        function filterRemovedBundledGames(list) {
+            if (!Array.isArray(list)) return [];
+            return list.filter(function(game) {
+                if (!game) return false;
+                var id = (game.id || '').toString();
+                var filename = (game.filename || '').toString().toLowerCase();
+                if (REMOVED_BUNDLED_GAME_IDS[id]) return false;
+                if (filename === 'controller_test.z64' || filename === 'bird kart.z64') return false;
+                return true;
+            });
+        }
 
         function loadGames() {
             console.log('[Netcade] loadGames() called');
@@ -3765,12 +3781,12 @@
                 })
                 .then(function(data) {
                     console.log('[Netcade] Games loaded from API:', data.length, 'games');
-                    games = data;
+                    games = filterRemovedBundledGames(data);
                     renderGameGrid();
                 })
                 .catch(function(err) {
                     console.log('[Netcade] API unavailable, using local games only');
-                    games = BUNDLED_HOMEBREW.concat(savedGames);
+                    games = BUNDLED_HOMEBREW.concat(filterRemovedBundledGames(savedGames));
                     console.log('[Netcade] Total games:', games.length);
                     renderGameGrid();
                 });
