@@ -3566,6 +3566,7 @@
             wizard: { active: false, index: 0, mode: null },
             isMobile: false,
             mobileGamepadSwitched: false,  // Tracks if we already auto-switched to gamepad on mobile
+            desktopGamepadSwitched: false, // Tracks if we already auto-switched to gamepad on desktop
             consoleAutoSwitched: false,    // Tracks if we already auto-switched console based on controller type
             gameRunning: false,
             controlsVisible: true,
@@ -3743,61 +3744,9 @@
         var games = [];
         var selectedGame = null;
         
-        // Calculate homebrew base URL dynamically
-        // Works whether page is at /Netcade/, /Netcade/index.html, or /Netcade/emulator/index_standalone.html
-        function getHomebrewBaseUrl() {
-            var pathname = window.location.pathname;
-            
-            // Remove trailing filename if present (anything after the last / that contains a .)
-            var lastSlash = pathname.lastIndexOf('/');
-            var afterSlash = pathname.substring(lastSlash + 1);
-            if (afterSlash.indexOf('.') !== -1) {
-                // Has a file extension, remove the filename
-                pathname = pathname.substring(0, lastSlash + 1);
-            } else if (!pathname.endsWith('/')) {
-                // No file extension and doesn't end with /, add trailing slash
-                pathname = pathname + '/';
-            }
-            
-            // If we're in the 'emulator' subdirectory, go up one level
-            if (pathname.indexOf('/emulator/') !== -1) {
-                pathname = pathname.replace('/emulator/', '/');
-            }
-            
-            var baseUrl = window.location.origin + pathname + 'homebrew/';
-            console.log('[Netcade] Computed homebrew base URL:', baseUrl, '(from pathname:', window.location.pathname + ')');
-            return baseUrl;
-        }
-        
-        var HOMEBREW_BASE_URL = getHomebrewBaseUrl();
-        
-        var BUNDLED_HOMEBREW = [
-            {
-                id: 'homebrew-controller-test',
-                title: 'N64 Controller Test',
-                filename: 'controller_test.z64',
-                fileSize: 2097152,
-                region: 'World',
-                genre: 'Utility',
-                romUrl: HOMEBREW_BASE_URL + 'controller_test.z64',
-                playCount: 0,
-                lastPlayed: null,
-                coverArt: null
-            },
-            {
-                id: 'homebrew-bird-kart',
-                title: 'Bird Kart',
-                filename: 'Bird Kart.z64',
-                fileSize: 2632992,
-                region: 'World',
-                genre: 'Racing',
-                romUrl: HOMEBREW_BASE_URL + encodeURIComponent('Bird Kart.z64'),
-                playCount: 0,
-                lastPlayed: null,
-                coverArt: null
-            }
-        ];
-        
+        // No bundled ROMs are shipped with this deployment.
+        var BUNDLED_HOMEBREW = [];
+
         function loadGames() {
             console.log('[Netcade] loadGames() called');
             elements.gameGrid.innerHTML = '<div class="game-grid-loading">Loading games...</div>';
@@ -3820,7 +3769,7 @@
                     renderGameGrid();
                 })
                 .catch(function(err) {
-                    console.log('[Netcade] API unavailable, using bundled homebrew + local games');
+                    console.log('[Netcade] API unavailable, using local games only');
                     games = BUNDLED_HOMEBREW.concat(savedGames);
                     console.log('[Netcade] Total games:', games.length);
                     renderGameGrid();
@@ -3983,7 +3932,7 @@
             elements.emulatorContainer.style.display = 'block';
             elements.btnNewGame.style.display = 'flex';
             
-            // Check if game has a direct ROM URL (bundled homebrew) or local ROM data
+            // Check if game has a direct ROM URL or local ROM data
             if (game.romUrl) {
                 console.log('[Netcade] Loading ROM from URL:', game.romUrl);
                 fetch(game.romUrl)
@@ -4379,7 +4328,33 @@
             previousAxes = gp.axes.slice();
             gamepadPollId = requestAnimationFrame(pollGamepad);
         }
-        
+
+        function getActiveConnectedControllerIndex(connectedGamepads) {
+            if (!connectedGamepads || connectedGamepads.length <= 1) return -1;
+            var deadZone = 0.6;
+            var gamepads = navigator.getGamepads();
+
+            for (var i = 0; i < connectedGamepads.length; i++) {
+                var gpMeta = connectedGamepads[i];
+                var gp = gamepads[gpMeta.index];
+                if (!gp) continue;
+
+                for (var b = 0; b < gp.buttons.length; b++) {
+                    if (gp.buttons[b].pressed || gp.buttons[b].value > 0.5) {
+                        return i;
+                    }
+                }
+
+                for (var a = 0; a < gp.axes.length; a++) {
+                    if (Math.abs(gp.axes[a]) > deadZone) {
+                        return i;
+                    }
+                }
+            }
+
+            return -1;
+        }
+
         function detectGamepads() {
             var gamepads = navigator.getGamepads();
             var connected = [];
@@ -4461,7 +4436,13 @@
                     var typeInfo = connected[0].type !== 'generic' ? ' (' + connected[0].typeName + ')' : '';
                     setStatus(newCount + ' controller(s) connected' + typeInfo, 'ready');
                 }
-                
+
+                // On desktop, switch controls panel to gamepad mode the first time a controller appears.
+                if (!state.isMobile && prevCount === 0 && state.mode !== 'gamepad' && !state.desktopGamepadSwitched) {
+                    state.desktopGamepadSwitched = true;
+                    switchMode('gamepad');
+                }
+
                 // On mobile, auto-switch to gamepad mode if still on mobile mode (only once)
                 if (state.isMobile && state.mode === 'mobile' && !state.mobileGamepadSwitched) {
                     state.mobileGamepadSwitched = true;
@@ -4482,12 +4463,19 @@
                     render();
                     setStatus(newCount + ' controller(s) connected', 'ready');
                 }
+
+                // Auto-select the player slot for whichever controller is currently active.
+                var activeControllerIndex = getActiveConnectedControllerIndex(state.connectedGamepads);
+                if (activeControllerIndex !== -1 && activeControllerIndex !== state.selectedGamepadIndex) {
+                    selectController(activeControllerIndex);
+                }
             } else if (newCount === 0 && prevCount > 0) {
                 // Never disable the gamepad tab - users need to access it to trigger detection
                 // elements.tabGamepad.disabled = true; // REMOVED: Keep tab always accessible
                 elements.gamepadTabLabel.textContent = 'USB Controller';
                 elements.controllerTabs.style.display = 'none';
                 state.mobileGamepadSwitched = false; // Reset so next connection will auto-switch
+                state.desktopGamepadSwitched = false; // Reset desktop auto-switch for next connection
                 // Don't auto-switch away from gamepad mode - let user stay and try to connect
                 setStatus('Controller disconnected - press any button to reconnect', 'ready');
                 render(); // Re-render to show "no controller" state
@@ -7389,7 +7377,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                                 </svg>
-                                <span><strong>Library Tab:</strong> Browse and select games to play. We include some free homebrew games to get you started!</span>
+                                <span><strong>Library Tab:</strong> Browse and select games you uploaded or saved locally.</span>
                             </li>
                             <li>
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
