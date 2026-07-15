@@ -5063,7 +5063,8 @@
                 quickSave: false,
                 quickLoad: false,
                 screenshot: false,
-                cacheManager: false
+                cacheManager: false,
+                fastForward: false
             };
             
             // Build control mappings from saved user preferences
@@ -5166,6 +5167,13 @@
                     controls[27] = { 'value2': 'LEFT_STICK_Y:-1' };
                 }
                 
+                // Clear emulator-action control bindings so Quick Save/Load,
+                // Fast Forward, and Change State Slot have no default assignment.
+                // EmulatorJS reserves IDs 28-31 (and nearby) for these actions.
+                for (var clearId = 28; clearId <= 35; clearId++) {
+                    controls[clearId] = { value: '', value2: '' };
+                }
+
                 return controls;
             }
             
@@ -5183,8 +5191,120 @@
                 emulatorLoaded = true;
                 state.gameRunning = true;
                 elements.btnNewGame.style.display = 'flex';
+                // Attempt to auto-select gamepads once the emulator UI is ready
+                setTimeout(netcadeAutoSelectGamepads, 600);
             };
-            
+
+            // ================================================================
+            // Auto-select connected gamepad + hide unwanted control-binding rows
+            // in the EmulatorJS control settings dialog.
+            // ================================================================
+
+            var NETCADE_HIDE_LABELS = [
+                'quick save', 'quick load',
+                'change state', 'state slot',
+                'fast forward'
+            ];
+
+            function netcadeAutoSelectGamepads() {
+                // Scan the whole document for any visible EmulatorJS settings selects
+                netcadeConfigureSettingsRoot(document.body);
+            }
+
+            function netcadeConfigureSettingsRoot(root) {
+                if (!root || !root.querySelectorAll) return;
+
+                // --- 1. Auto-select connected gamepad in "Connected Gamepad" dropdowns ---
+                var selects = root.querySelectorAll('select');
+                for (var si = 0; si < selects.length; si++) {
+                    var sel = selects[si];
+                    var opts = sel.options;
+                    var notConnectedExists = false;
+                    var hasOtherOptions = false;
+                    for (var oi = 0; oi < opts.length; oi++) {
+                        var optLower = (opts[oi].text || '').toLowerCase();
+                        if (optLower.indexOf('not connected') !== -1 || opts[oi].value === '-1') {
+                            notConnectedExists = true;
+                        } else if (opts[oi].value !== '') {
+                            hasOtherOptions = true;
+                        }
+                    }
+
+                    // Only touch dropdowns that look like "Connected Gamepad" selectors
+                    if (!notConnectedExists || !hasOtherOptions) continue;
+
+                    // Only auto-assign if currently set to "Not Connected"
+                    var currentVal = String(sel.value);
+                    if (currentVal !== '-1' && currentVal !== '') continue;
+
+                    // Find the first physically connected gamepad
+                    var gpList = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+                    var picked = false;
+                    for (var gi = 0; gi < gpList.length; gi++) {
+                        if (!gpList[gi]) continue;
+                        // Look for an option whose value matches the gamepad API index
+                        for (var oj = 0; oj < opts.length; oj++) {
+                            if (String(opts[oj].value) === String(gi)) {
+                                sel.value = String(gi);
+                                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                                console.log('[Netcade] Auto-selected gamepad index', gi, 'for player slot');
+                                picked = true;
+                                break;
+                            }
+                        }
+                        if (picked) break;
+                    }
+                    // Fallback: just pick the first non-"Not Connected" option
+                    if (!picked) {
+                        for (var ok = 0; ok < opts.length; ok++) {
+                            if (String(opts[ok].value) !== '-1' && opts[ok].value !== '') {
+                                sel.value = opts[ok].value;
+                                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                                console.log('[Netcade] Fallback: auto-selected first gamepad option');
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // --- 2. Hide Quick Save State / Quick Load State / Change State Slot / Fast Forward rows ---
+                function shouldHide(text) {
+                    var t = (text || '').toLowerCase();
+                    for (var hi = 0; hi < NETCADE_HIDE_LABELS.length; hi++) {
+                        if (t.indexOf(NETCADE_HIDE_LABELS[hi]) !== -1) return true;
+                    }
+                    return false;
+                }
+
+                // EmulatorJS renders settings as table rows or labelled divs
+                var rowCandidates = root.querySelectorAll('tr, td');
+                for (var ri = 0; ri < rowCandidates.length; ri++) {
+                    var el = rowCandidates[ri];
+                    if (el.getAttribute('data-netcade-hidden')) continue;
+                    // Use only the direct text of the first cell / element for matching
+                    var firstCell = el.querySelector ? el.querySelector('td, th, label') : null;
+                    var labelText = firstCell ? (firstCell.textContent || '') : (el.textContent || '');
+                    if (shouldHide(labelText)) {
+                        var rowToHide = el.tagName === 'TD' ? (el.closest ? el.closest('tr') || el : el) : el;
+                        rowToHide.style.display = 'none';
+                        rowToHide.setAttribute('data-netcade-hidden', '1');
+                    }
+                }
+            }
+
+            // Observe DOM mutations to catch the settings dialog whenever it opens
+            var netcadeEjsObserver = new MutationObserver(function(mutations) {
+                var needsScan = false;
+                for (var mi = 0; mi < mutations.length; mi++) {
+                    if (mutations[mi].addedNodes.length > 0) { needsScan = true; break; }
+                }
+                if (needsScan) {
+                    // Small delay to let EmulatorJS finish building the dialog
+                    setTimeout(netcadeAutoSelectGamepads, 150);
+                }
+            });
+            netcadeEjsObserver.observe(document.body, { childList: true, subtree: true });
+
             var script = document.createElement('script');
             script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
             script.onerror = function() {
