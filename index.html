@@ -3855,7 +3855,9 @@
             { id: 'pro-056', title: 'Wheel of Fortune', filename: 'Wheel of Fortune.z64', relativePath: 'Wheel of Fortune.z64', console: 'n64', genre: 'Pro' },
             { id: 'pro-057', title: 'WWF WrestleMania 2000', filename: 'WWF WrestleMania 2000.z64', relativePath: 'WWF WrestleMania 2000.z64', console: 'n64', genre: 'Pro' },
             { id: 'pro-058', title: 'Xena - Warrior Princess - The Talisman of Fate', filename: 'Xena - Warrior Princess - The Talisman of Fate.z64', relativePath: 'Xena - Warrior Princess - The Talisman of Fate.z64', console: 'n64', genre: 'Pro' },
-            { id: 'pro-059', title: "Yoshi's Story", filename: "Yoshi's Story.z64", relativePath: "Yoshi's Story.z64", console: 'n64', genre: 'Pro' }
+            { id: 'pro-059', title: "Yoshi's Story", filename: "Yoshi's Story.z64", relativePath: "Yoshi's Story.z64", console: 'n64', genre: 'Pro' },
+            { id: 'pro-060', title: 'Aladdin', filename: 'Aladdin.zip', relativePath: 'Aladdin.zip', console: 'n64', genre: 'Pro' },
+            { id: 'pro-061', title: 'Mario Kart 64', filename: 'Mario Kart 64 (USA).z64', relativePath: 'Mario Kart 64/Mario Kart 64 (USA).z64', console: 'n64', genre: 'Pro' }
         ];
 
         var PRO_UNLOCKABLE_GAME_IDS = {};
@@ -3884,9 +3886,9 @@
             }).join('/');
         }
 
-        function buildProUnlockableGames() {
+        function buildProUnlockableGamesFromList(romList) {
             var baseUrl = getProRomBaseUrl();
-            return PRO_UNLOCKABLE_ROMS.map(function(game) {
+            return (romList || []).map(function(game) {
                 var copy = Object.assign({}, game);
                 var relativePath = (game.relativePath || game.path || game.filename || '').replace(/^\/+/, '');
                 if (!relativePath) return null;
@@ -3898,12 +3900,197 @@
             }).filter(function(game) { return !!game; });
         }
 
+        function buildProUnlockableGames() {
+            return buildProUnlockableGamesFromList(PRO_UNLOCKABLE_ROMS);
+        }
+
+        function isProGameEntry(game) {
+            if (!game) return false;
+            var id = (game.id || '').toString();
+            if (PRO_UNLOCKABLE_GAME_IDS[id]) return true;
+
+            var genre = (game.genre || '').toString().toLowerCase();
+            if (genre === 'pro') return true;
+
+            var relPath = (game.relativePath || game.path || '').toString().toLowerCase();
+            var romUrl = (game.romUrl || '').toString().toLowerCase();
+            return relPath.indexOf('pro-roms/') !== -1 || romUrl.indexOf('/pro-roms/') !== -1;
+        }
+
+        function createAutoProId(relativePath) {
+            return 'pro-auto-' + (relativePath || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        function titleFromFilename(filename) {
+            var stem = (filename || '').replace(/\.[^.]+$/, '');
+            stem = stem.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
+            return stem || filename || 'Unknown Game';
+        }
+
+        function buildAutoProGame(relativePath) {
+            var normalized = (relativePath || '').replace(/^\/+/, '');
+            if (!normalized) return null;
+            var parts = normalized.split('/');
+            var filename = parts[parts.length - 1] || '';
+            if (!filename) return null;
+
+            return {
+                id: createAutoProId(normalized),
+                title: titleFromFilename(filename),
+                filename: filename,
+                relativePath: normalized,
+                console: detectConsole(filename) || 'n64',
+                genre: 'Pro'
+            };
+        }
+
+        function isRomFilename(filename) {
+            var lower = (filename || '').toLowerCase();
+            if (!lower || lower.endsWith('/')) return false;
+            var exts = getAllRomExtensions();
+            for (var i = 0; i < exts.length; i++) {
+                if (lower.endsWith(exts[i])) return true;
+            }
+            return false;
+        }
+
+        function extractRelativeProPath(hrefValue, currentUrl) {
+            var href = (hrefValue || '').trim();
+            if (!href || href === './' || href === '../' || href === '..') return '';
+            if (href.startsWith('?') || href.startsWith('#')) return '';
+
+            try {
+                var parsed = new URL(href, currentUrl);
+                var decodedPath = decodeURIComponent(parsed.pathname || '');
+                var marker = '/pro-roms/';
+                var markerIdx = decodedPath.toLowerCase().indexOf(marker);
+                if (markerIdx >= 0) {
+                    return decodedPath.slice(markerIdx + marker.length).replace(/^\/+/, '');
+                }
+            } catch (e) {
+                // Fallback below for unusual href formats.
+            }
+
+            var direct = href.split('?')[0].split('#')[0];
+            direct = direct.replace(/^\.\//, '').replace(/^\/+/, '');
+            if (direct.toLowerCase().indexOf('pro-roms/') === 0) {
+                direct = direct.slice('pro-roms/'.length);
+            }
+            return decodeURIComponent(direct);
+        }
+
+        function discoverProRomPaths(directoryPath, seenDirs, maxDepth) {
+            var dir = (directoryPath || '').replace(/^\/+/, '');
+            if (dir && !dir.endsWith('/')) dir += '/';
+            if (seenDirs[dir]) return Promise.resolve([]);
+            seenDirs[dir] = true;
+
+            if (maxDepth < 0) return Promise.resolve([]);
+
+            var baseUrl = getProRomBaseUrl();
+            var dirUrl = new URL(encodePathPreservingSlashes(dir), baseUrl).href;
+
+            return fetch(dirUrl, { cache: 'no-store' })
+                .then(function(res) {
+                    if (!res.ok) throw new Error('Directory listing unavailable: ' + res.status);
+                    return res.text();
+                })
+                .then(function(html) {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+                    var links = Array.prototype.slice.call(doc.querySelectorAll('a[href]'));
+
+                    var localFiles = [];
+                    var nestedPromises = [];
+
+                    links.forEach(function(link) {
+                        var relPath = extractRelativeProPath(link.getAttribute('href'), dirUrl);
+                        if (!relPath) return;
+                        if (relPath === dir || relPath === './' || relPath === '../') return;
+
+                        if (relPath.endsWith('/')) {
+                            if (maxDepth > 0) {
+                                nestedPromises.push(discoverProRomPaths(relPath, seenDirs, maxDepth - 1));
+                            }
+                            return;
+                        }
+
+                        if (isRomFilename(relPath)) {
+                            localFiles.push(relPath);
+                        }
+                    });
+
+                    return Promise.all(nestedPromises).then(function(nestedResults) {
+                        var combined = localFiles.slice();
+                        nestedResults.forEach(function(list) {
+                            combined = combined.concat(list || []);
+                        });
+                        return combined;
+                    });
+                })
+                .catch(function() {
+                    return [];
+                });
+        }
+
+        var proAutoCatalogPromise = null;
+        var proAutoCatalogCache = null;
+
+        function getCombinedProUnlockableGames() {
+            if (proAutoCatalogCache) {
+                return Promise.resolve(proAutoCatalogCache.slice());
+            }
+            if (proAutoCatalogPromise) {
+                return proAutoCatalogPromise;
+            }
+
+            var staticGames = buildProUnlockableGames();
+            proAutoCatalogPromise = discoverProRomPaths('', {}, 4)
+                .then(function(paths) {
+                    var byRelativePath = {};
+
+                    staticGames.forEach(function(game) {
+                        var key = (game.relativePath || '').toLowerCase();
+                        if (!key) return;
+                        byRelativePath[key] = game;
+                    });
+
+                    (paths || []).forEach(function(path) {
+                        var normalized = (path || '').replace(/^\/+/, '');
+                        var key = normalized.toLowerCase();
+                        if (!key || byRelativePath[key]) return;
+                        var autoGame = buildAutoProGame(normalized);
+                        if (autoGame) {
+                            byRelativePath[key] = autoGame;
+                        }
+                    });
+
+                    var merged = Object.keys(byRelativePath).map(function(key) { return byRelativePath[key]; });
+                    var built = buildProUnlockableGamesFromList(merged);
+                    proAutoCatalogCache = built;
+                    return built.slice();
+                })
+                .catch(function(err) {
+                    console.warn('[Netcade] Pro auto-discovery failed, using static list:', err && err.message ? err.message : err);
+                    proAutoCatalogCache = staticGames;
+                    return staticGames.slice();
+                })
+                .finally(function() {
+                    proAutoCatalogPromise = null;
+                });
+
+            return proAutoCatalogPromise;
+        }
+
         function filterLockedProGames(list, proUnlocked) {
             if (!Array.isArray(list)) return [];
             return list.filter(function(game) {
                 if (!game) return false;
                 if (proUnlocked) return true;
-                return !PRO_UNLOCKABLE_GAME_IDS[(game.id || '').toString()];
+                return !isProGameEntry(game);
             });
         }
 
@@ -3945,6 +4132,7 @@
             console.log('[Netcade] loadGames() called');
             elements.gameGrid.innerHTML = '<div class="game-grid-loading">Loading games...</div>';
             var proUnlocked = isProUnlocked();
+            var proGamesPromise = proUnlocked ? getCombinedProUnlockableGames() : Promise.resolve([]);
 
             var savedGames = [];
             try {
@@ -3962,21 +4150,25 @@
                 .then(function(data) {
                     console.log('[Netcade] Games loaded from API:', data.length, 'games');
                     var loaded = filterLockedProGames(filterRemovedBundledGames(data), proUnlocked);
-                    if (proUnlocked) {
-                        loaded = mergeGamesById(loaded, buildProUnlockableGames());
-                    }
-                    games = loaded;
-                    renderGameGrid();
+                    return proGamesPromise.then(function(proGames) {
+                        if (proUnlocked) {
+                            loaded = mergeGamesById(loaded, proGames);
+                        }
+                        games = loaded;
+                        renderGameGrid();
+                    });
                 })
                 .catch(function(err) {
                     console.log('[Netcade] API unavailable, using local games only');
                     var loaded = BUNDLED_HOMEBREW.concat(savedGames);
-                    if (proUnlocked) {
-                        loaded = mergeGamesById(loaded, buildProUnlockableGames());
-                    }
-                    games = loaded;
-                    console.log('[Netcade] Total games:', games.length);
-                    renderGameGrid();
+                    return proGamesPromise.then(function(proGames) {
+                        if (proUnlocked) {
+                            loaded = mergeGamesById(loaded, proGames);
+                        }
+                        games = loaded;
+                        console.log('[Netcade] Total games:', games.length);
+                        renderGameGrid();
+                    });
                 });
         }
         
@@ -4579,7 +4771,6 @@
                         type: type,
                         typeName: getControllerTypeName(type)
                     });
-                    console.log('[Gamepad] Detected controller:', gamepads[i].id, 'type:', type, 'at index', gamepads[i].index);
                 }
             }
             
@@ -5205,10 +5396,25 @@
                 'change state', 'state slot',
                 'fast forward'
             ];
+            var netcadeLastEjsScanAt = 0;
+            var netcadePendingSettingsScan = null;
 
             function netcadeAutoSelectGamepads() {
+                var now = Date.now();
+                if (now - netcadeLastEjsScanAt < 300) return;
+                netcadeLastEjsScanAt = now;
                 // Scan the whole document for any visible EmulatorJS settings selects
                 netcadeConfigureSettingsRoot(document.body);
+            }
+
+            function netcadeScheduleSettingsScan(delayMs) {
+                if (netcadePendingSettingsScan) {
+                    clearTimeout(netcadePendingSettingsScan);
+                }
+                netcadePendingSettingsScan = setTimeout(function() {
+                    netcadePendingSettingsScan = null;
+                    netcadeAutoSelectGamepads();
+                }, delayMs || 150);
             }
 
             function netcadeConfigureSettingsRoot(root) {
@@ -5292,18 +5498,21 @@
                 }
             }
 
-            // Observe DOM mutations to catch the settings dialog whenever it opens
-            var netcadeEjsObserver = new MutationObserver(function(mutations) {
-                var needsScan = false;
-                for (var mi = 0; mi < mutations.length; mi++) {
-                    if (mutations[mi].addedNodes.length > 0) { needsScan = true; break; }
-                }
-                if (needsScan) {
-                    // Small delay to let EmulatorJS finish building the dialog
-                    setTimeout(netcadeAutoSelectGamepads, 150);
-                }
-            });
-            netcadeEjsObserver.observe(document.body, { childList: true, subtree: true });
+            // Keep settings scans targeted. A broad MutationObserver over the whole
+            // page can be expensive while the emulator is running.
+            document.addEventListener('click', function(evt) {
+                var target = evt.target;
+                if (!target) return;
+                var trigger = target.closest ? target.closest('button, [role="button"], a') : null;
+                if (!trigger) return;
+
+                var hint = ((trigger.textContent || '') + ' ' + (trigger.getAttribute('title') || '') + ' ' + (trigger.getAttribute('aria-label') || '')).toLowerCase();
+                if (hint.indexOf('setting') === -1 && hint.indexOf('control') === -1 && hint.indexOf('controller') === -1) return;
+
+                // Run once immediately and once after UI settles.
+                netcadeScheduleSettingsScan(120);
+                netcadeScheduleSettingsScan(600);
+            }, true);
 
             var script = document.createElement('script');
             script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
@@ -5703,8 +5912,8 @@
             
             window.addEventListener('gamepadconnected', function() { setTimeout(detectGamepads, 100); });
             window.addEventListener('gamepaddisconnected', function() { setTimeout(detectGamepads, 100); });
-            setInterval(detectGamepads, 500);
-            
+            setInterval(detectGamepads, 1000);
+
             // Multiplayer event handlers
             elements.mainTabMultiplayer.addEventListener('click', function() { switchMainTab('multiplayer'); });
             elements.mpTabCreate.addEventListener('click', function() { switchMpTab('create'); });
